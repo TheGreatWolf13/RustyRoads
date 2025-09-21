@@ -21,7 +21,7 @@ impl Graphics {
                 for i in 0..CIRCLE_QUALITY {
                     let angle = 2.0 * PI / CIRCLE_QUALITY as f32 * i as f32;
                     vertices.push(Vertex {
-                        position: [10.0 * angle.cos(), 10.0 * angle.sin()],
+                        position: [angle.cos(), angle.sin()],
                         uv: [0.0, 0.0],
                         color: [1.0, 1.0, 1.0, 1.0],
                     });

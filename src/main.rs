@@ -46,10 +46,6 @@ impl EventHandler for Game {
                     DrawParam::new().offset(-Vec2::ZERO)
                                     .color(Color::BLUE),
         );
-        canvas.draw(self.graphics.circle(),
-                    DrawParam::new().offset(-Vec2::new(20.0, 0.0))
-                                    .color(Color::RED),
-        );
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
         canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
