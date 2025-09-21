@@ -1,6 +1,6 @@
 use crate::input::BindingType::{Backward, Forward, Left, Right, RotateLeft, RotateRight};
 use crate::input::Input;
-use ggez::glam::{Mat4, Vec2};
+use ggez::glam::{Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
 
 const ACCELERATION: f32 = 8.0 / 9.0;
@@ -30,7 +30,13 @@ impl Camera {
             inv_view_matrix: Mat4::IDENTITY,
         };
         cam.adjust_projection(window_size);
+        cam.adjust_view();
         cam
+    }
+
+    fn adjust_view(&mut self) {
+        self.view_matrix = Mat4::look_at_rh(Vec3::new(self.pos.x, self.pos.y, 100.0), Vec3::new(self.pos.x, self.pos.y, -1.0), Vec3::new(self.roll.cos(), self.roll.sin(), 0.0));
+        self.inv_view_matrix = self.view_matrix.inverse();
     }
 
     pub fn adjust_projection(&mut self, window_size: Vec2) {
@@ -39,7 +45,8 @@ impl Camera {
         self.inv_proj_matrix = self.proj_matrix.inverse();
     }
 
-    pub fn tick(&mut self, input: &Input) {
+    pub fn tick(&mut self, input: &Input, window_size: Vec2) {
+        let last_roll = self.roll;
         if input.get(RotateLeft).is_down() {
             self.roll += PI / 180.0;
         }
@@ -59,23 +66,27 @@ impl Camera {
             self.velocity.x -= ACCELERATION;
         }
         self.velocity *= DAMPING;
+        let last_pos = self.pos;
         self.pos += self.velocity;
-        // float lastZoom = this.zoom;
-        // float scrollY = MouseListener.getScrollY();
-        // if (scrollY > 0) {
-        //     this.zoom /= 2;
-        //     if (this.zoom < 1 / 16.0f) {
-        //         this.zoom = 1 / 16.0f;
-        //     }
-        // }
-        // else if (scrollY < 0) {
-        //     this.zoom *= 2;
-        //     if (this.zoom > 16) {
-        //         this.zoom = 16;
-        //     }
-        // }
-        // if (lastZoom != this.zoom) {
-        //     this.adjustProjection();
-        // }
+        if last_roll != self.roll || last_pos != self.pos {
+            self.adjust_view();
+        }
+        let last_zoom = self.zoom;
+        let scroll = input.scroll.y;
+        if scroll > 0.0 {
+            self.zoom /= 2.0;
+            if self.zoom < 1.0 / 16.0 {
+                self.zoom = 1.0 / 16.0;
+            }
+        } //
+        else if scroll < 0.0 {
+            self.zoom *= 2.0;
+            if self.zoom > 16.0 {
+                self.zoom = 16.0;
+            }
+        }
+        if last_zoom != self.zoom {
+            self.adjust_projection(window_size);
+        }
     }
 }

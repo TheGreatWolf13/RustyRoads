@@ -27,7 +27,8 @@ impl Game {
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         while ctx.time.check_update_time(20) {
-            self.camera.tick(&self.input);
+            self.camera.tick(&self.input, ctx.gfx.size().into());
+            self.input.end_tick();
         }
         Ok(())
     }
@@ -37,7 +38,13 @@ impl EventHandler for Game {
         Ok(())
     }
 
-    fn mouse_button_down_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32) -> GameResult {
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, button: MouseButton, _x: f32, _y: f32) -> GameResult {
+        self.input.handle_release(button.into());
+        Ok(())
+    }
+
+    fn mouse_button_down_event(&mut self, _ctx: &mut Context, button: MouseButton, _x: f32, _y: f32) -> GameResult {
+        self.input.handle_down(button.into());
         Ok(())
     }
 
@@ -53,6 +60,11 @@ impl EventHandler for Game {
 
     fn key_up_event(&mut self, _ctx: &mut Context, input: KeyInput) -> GameResult {
         self.input.handle_release(input.event.physical_key.into());
+        Ok(())
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, x: f32, y: f32) -> GameResult {
+        self.input.scroll = Vec2::new(x, y);
         Ok(())
     }
 }

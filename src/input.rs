@@ -1,5 +1,6 @@
 use crate::input::BindingType::{Backward, Forward, Left, Right, RotateLeft, RotateRight};
 use enum_map::{Enum, EnumMap};
+use ggez::glam::Vec2;
 use ggez::input::keyboard::KeyCode;
 use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW};
 use ggez::input::mouse::MouseButton;
@@ -70,13 +71,19 @@ pub enum BindingType {
 pub struct Input {
     bindings_by_key: HashMap<PhysicalBinding, Vec<BindingType>>,
     bindings: EnumMap<BindingType, KeyBinding>,
+    pub scroll: Vec2,
 }
 
 impl Input {
+    pub fn end_tick(&mut self) {
+        self.scroll = Vec2::ZERO;
+    }
+
     pub fn new() -> Self {
         let mut input = Input {
             bindings_by_key: HashMap::new(),
             bindings: EnumMap::from_fn(|_| KeyBinding::new()),
+            scroll: Vec2::ZERO,
         };
         input.bind(keyboard(KeyQ), RotateLeft);
         input.bind(keyboard(KeyE), RotateRight);
@@ -126,4 +133,9 @@ impl Input {
 #[inline]
 fn keyboard(key: KeyCode) -> PhysicalBinding {
     PhysicalBinding::Keyboard(PhysicalKey::Code(key))
+}
+
+#[inline]
+fn mouse(button: MouseButton) -> PhysicalBinding {
+    PhysicalBinding::Mouse(button)
 }
