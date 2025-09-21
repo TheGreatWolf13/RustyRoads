@@ -15,6 +15,7 @@ pub struct Camera {
     view_matrix: Mat4,
     inv_proj_matrix: Mat4,
     inv_view_matrix: Mat4,
+    last_window_size: Vec2,
 }
 
 impl Camera {
@@ -28,10 +29,23 @@ impl Camera {
             view_matrix: Mat4::IDENTITY,
             inv_proj_matrix: Mat4::IDENTITY,
             inv_view_matrix: Mat4::IDENTITY,
+            last_window_size: Vec2::ZERO,
         };
         cam.adjust_projection(window_size);
         cam.adjust_view();
         cam
+    }
+
+    pub fn get_projection_matrix(&self) -> Mat4 {
+        self.proj_matrix
+    }
+
+    pub fn get_view_matrix(&self) -> Mat4 {
+        self.view_matrix
+    }
+
+    pub fn get_zoom(&self) -> f32 {
+        self.zoom
     }
 
     fn adjust_view(&mut self) {
@@ -45,29 +59,30 @@ impl Camera {
         self.inv_proj_matrix = self.proj_matrix.inverse();
     }
 
-    pub fn tick(&mut self, input: &Input, window_size: Vec2) {
+    pub fn tick(&mut self, input: &Input, window_size: Vec2, delta_time: f32) {
+        let delta_time = delta_time / (1.0 / 75.0);
         let last_roll = self.roll;
         if input.get(RotateLeft).is_down() {
-            self.roll += PI / 180.0;
+            self.roll += PI / 180.0 * delta_time;
         }
         if input.get(RotateRight).is_down() {
-            self.roll -= PI / 180.0;
+            self.roll -= PI / 180.0 * delta_time;
         }
         if input.get(Forward).is_down() {
-            self.velocity.y += ACCELERATION;
+            self.velocity.y += ACCELERATION * delta_time;
         }
         if input.get(Backward).is_down() {
-            self.velocity.y -= ACCELERATION;
+            self.velocity.y -= ACCELERATION * delta_time;
         }
         if input.get(Right).is_down() {
-            self.velocity.x += ACCELERATION;
+            self.velocity.x += ACCELERATION * delta_time;
         }
         if input.get(Left).is_down() {
-            self.velocity.x -= ACCELERATION;
+            self.velocity.x -= ACCELERATION * delta_time;
         }
-        self.velocity *= DAMPING;
+        self.velocity *= DAMPING * delta_time;
         let last_pos = self.pos;
-        self.pos += self.velocity;
+        self.pos += self.velocity * self.zoom * delta_time;
         if last_roll != self.roll || last_pos != self.pos {
             self.adjust_view();
         }
@@ -85,8 +100,9 @@ impl Camera {
                 self.zoom = 16.0;
             }
         }
-        if last_zoom != self.zoom {
+        if last_zoom != self.zoom || self.last_window_size != window_size {
             self.adjust_projection(window_size);
+            self.last_window_size = window_size;
         }
     }
 }

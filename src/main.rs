@@ -1,40 +1,55 @@
 mod camera;
 mod input;
+mod graphics;
 
 use crate::camera::Camera;
+use crate::graphics::Graphics;
 use crate::input::Input;
-use ggez::conf::{Conf, WindowMode, WindowSetup};
+use ggez::conf::{NumSamples, WindowMode, WindowSetup};
 use ggez::event::EventHandler;
 use ggez::glam::Vec2;
+use ggez::graphics::{Canvas, Color, DrawParam, Drawable, Text};
 use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
 use ggez::*;
+use std::path::PathBuf;
 
 struct Game {
     camera: Camera,
     input: Input,
+    graphics: Graphics,
 }
 
 impl Game {
-    fn new(window_size: Vec2) -> Self {
-        Game {
+    fn new(ctx: &Context, window_size: Vec2) -> GameResult<Self> {
+        Ok(Game {
             camera: Camera::new(window_size),
             input: Input::new(),
-        }
+            graphics: Graphics::new(ctx)?,
+        })
     }
 }
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        while ctx.time.check_update_time(20) {
-            self.camera.tick(&self.input, ctx.gfx.size().into());
-            self.input.end_tick();
-        }
+        while ctx.time.check_update_time(20) {}
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        self.camera.tick(&self.input, ctx.gfx.size().into(), ctx.time.delta().as_secs_f32());
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
+        let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
+        canvas.set_projection(self.camera.get_projection_matrix() * self.camera.get_view_matrix());
+        canvas.draw(self.graphics.circle(), Vec2::ZERO);
+        canvas.finish(ctx)?;
+        let mut canvas = Canvas::from_frame(ctx, None);
+        canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
+                    DrawParam::new().dest(Vec2::new(5.0, 5.0))
+                                    .color(Color::BLUE),
+        );
+        canvas.finish(ctx)?;
+        self.input.end_tick();
         Ok(())
     }
 
@@ -75,6 +90,6 @@ fn main() -> GameResult {
         .window_mode(WindowMode::default().dimensions(800.0, 600.0).resizable(true))
         .add_resource_path(PathBuf::from("./resources"))
         .build()?;
-    let game = Game::new(ctx.gfx.size().into());
+    let game = Game::new(&ctx, ctx.gfx.size().into())?;
     event::run(ctx, event_loop, game)
 }
