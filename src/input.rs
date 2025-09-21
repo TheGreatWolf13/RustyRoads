@@ -1,7 +1,8 @@
 use crate::camera::Camera;
 use crate::input::BindingType::{Backward, Forward, Left, PlaceNode, Right, RotateLeft, RotateRight};
+use crate::Game;
 use enum_map::{Enum, EnumMap};
-use ggez::glam::{Mat4, Vec2, Vec4};
+use ggez::glam::{Vec2, Vec4};
 use ggez::input::keyboard::KeyCode;
 use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW};
 use ggez::input::mouse::MouseButton;
@@ -78,9 +79,9 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn tick(&self, window_size: Vec2, cam: &Camera) {
+    pub fn tick(&self, window_size: Vec2, game: &Game) {
         while self.get(PlaceNode).consume_click() {
-            println!("Clicked at {}", self.get_world_pos_from_screen_pos(window_size, cam.get_inv_proj_matrix(), cam.get_inv_view_matrix()))
+            game.node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &game.camera))
         }
     }
 
@@ -144,10 +145,10 @@ impl Input {
         });
     }
 
-    fn get_world_pos_from_screen_pos(&self, window_size: Vec2, inverse_proj: Mat4, inverse_view: Mat4) -> Vec2 {
+    fn get_world_pos_from_screen_pos(&self, window_size: Vec2, cam: &Camera) -> Vec2 {
         let vec = Vec4::new((2.0 * self.mouse_pos.x - window_size.x) / window_size.x, (window_size.y - 2.0 * self.mouse_pos.y) / window_size.y, -1.0, 1.0);
-        let vec = inverse_proj.mul_vec4(vec);
-        let vec = inverse_view.mul_vec4(vec);
+        let vec = cam.get_inv_proj_matrix().mul_vec4(vec);
+        let vec = cam.get_inv_view_matrix().mul_vec4(vec);
         Vec2::new(vec.x, vec.y)
     }
 }

@@ -1,10 +1,12 @@
 mod camera;
 mod input;
 mod graphics;
+mod node;
 
 use crate::camera::Camera;
 use crate::graphics::Graphics;
 use crate::input::Input;
+use crate::node::NodeManager;
 use ggez::conf::{NumSamples, WindowMode, WindowSetup};
 use ggez::event::EventHandler;
 use ggez::glam::Vec2;
@@ -18,6 +20,7 @@ struct Game {
     camera: Camera,
     input: Input,
     graphics: Graphics,
+    node_manager: NodeManager,
 }
 
 impl Game {
@@ -26,6 +29,7 @@ impl Game {
             camera: Camera::new(window_size),
             input: Input::new(),
             graphics: Graphics::new(ctx)?,
+            node_manager: NodeManager::new(),
         })
     }
 }
@@ -38,7 +42,7 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         self.camera.tick(&self.input, ctx.gfx.drawable_size().into(), ctx.time.delta().as_secs_f32());
-        self.input.tick(ctx.gfx.drawable_size().into(), &self.camera);
+        self.input.tick(ctx.gfx.drawable_size().into(), &self);
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_proj_matrix() * self.camera.get_view_matrix());
@@ -46,6 +50,12 @@ impl EventHandler for Game {
                     DrawParam::new().offset(-Vec2::ZERO)
                                     .color(Color::BLUE),
         );
+        self.node_manager.for_all_nodes(|node| {
+            canvas.draw(self.graphics.circle(),
+                        DrawParam::new().offset(-node.get_pos())
+                                        .color(Color::GREEN),
+            );
+        });
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
         canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
