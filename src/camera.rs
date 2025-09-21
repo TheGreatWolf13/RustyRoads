@@ -36,7 +36,7 @@ impl Camera {
         cam
     }
 
-    pub fn get_projection_matrix(&self) -> Mat4 {
+    pub fn get_proj_matrix(&self) -> Mat4 {
         self.proj_matrix
     }
 
@@ -57,6 +57,14 @@ impl Camera {
         let window_size = window_size * 0.5 * self.zoom;
         self.proj_matrix = Mat4::orthographic_rh_gl(-window_size.x, window_size.x, -window_size.y, window_size.y, 0.0, 100.0);
         self.inv_proj_matrix = self.proj_matrix.inverse();
+    }
+
+    pub fn get_inv_proj_matrix(&self) -> Mat4 {
+        self.inv_proj_matrix
+    }
+
+    pub fn get_inv_view_matrix(&self) -> Mat4 {
+        self.inv_view_matrix
     }
 
     pub fn tick(&mut self, input: &Input, window_size: Vec2, delta_time: f32) {
