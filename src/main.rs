@@ -70,11 +70,10 @@ impl EventHandler for Game {
 }
 
 fn main() -> GameResult {
-    let mut c = Conf::new();
-    c.window_mode = WindowMode::default();
-    c.window_setup = WindowSetup::from(c.window_setup).vsync(true);
     let (ctx, event_loop) = ContextBuilder::new("rusty_roads", "TheGreatWolf")
-        .default_conf(c)
+        .window_setup(WindowSetup::default().title("").vsync(true).samples(NumSamples::Four))
+        .window_mode(WindowMode::default().dimensions(800.0, 600.0).resizable(true))
+        .add_resource_path(PathBuf::from("./resources"))
         .build()?;
     let game = Game::new(ctx.gfx.size().into());
     event::run(ctx, event_loop, game)
