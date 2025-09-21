@@ -41,12 +41,15 @@ impl EventHandler for Game {
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_projection_matrix() * self.camera.get_view_matrix());
-        canvas.draw(self.graphics.circle(), Vec2::ZERO);
+        canvas.draw(self.graphics.circle(),
+                    DrawParam::new().dest(Vec2::ZERO)
+                                    .color(Color::BLUE),
+        );
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
         canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
                     DrawParam::new().dest(Vec2::new(5.0, 5.0))
-                                    .color(Color::BLUE),
+                                    .color(Color::WHITE),
         );
         canvas.finish(ctx)?;
         self.input.end_tick();
