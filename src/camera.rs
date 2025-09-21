@@ -1,6 +1,6 @@
 use crate::input::BindingType::{Backward, Forward, Left, Right, RotateLeft, RotateRight};
 use crate::input::Input;
-use ggez::glam::{Mat4, Vec2, Vec3};
+use ggez::glam::{Mat2, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
 
 const ACCELERATION: f32 = 8.0 / 9.0;
@@ -76,18 +76,23 @@ impl Camera {
         if input.get(RotateRight).is_down() {
             self.roll -= PI / 180.0 * delta_time;
         }
+        let mut move_vec = Vec2::ZERO;
         if input.get(Forward).is_down() {
-            self.velocity.y += ACCELERATION * delta_time;
+            move_vec.y += 1.0;
         }
         if input.get(Backward).is_down() {
-            self.velocity.y -= ACCELERATION * delta_time;
+            move_vec.y -= 1.0;
         }
         if input.get(Right).is_down() {
-            self.velocity.x += ACCELERATION * delta_time;
+            move_vec.x += 1.0;
         }
         if input.get(Left).is_down() {
-            self.velocity.x -= ACCELERATION * delta_time;
+            move_vec.x -= 1.0;
         }
+        move_vec *= ACCELERATION * delta_time;
+        let rotation = Mat2::from_angle(self.roll - PI / 2.0);
+        let move_vec = rotation.mul_vec2(move_vec);
+        self.velocity += move_vec;
         self.velocity *= DAMPING * delta_time;
         let last_pos = self.pos;
         self.pos += self.velocity * self.zoom * delta_time;
