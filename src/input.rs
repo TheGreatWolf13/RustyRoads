@@ -1,5 +1,5 @@
 use crate::camera::Camera;
-use crate::input::BindingType::{Backward, Forward, Left, PlaceNode, Right, RotateLeft, RotateRight};
+use crate::input::BindingType::{Backward, Forward, Left, OpenConsole, PlaceNode, Right, RotateLeft, RotateRight};
 use crate::Game;
 use enum_map::{Enum, EnumMap};
 use ggez::glam::{Vec2, Vec4};
@@ -69,6 +69,7 @@ pub enum BindingType {
     Right,
     Left,
     PlaceNode,
+    OpenConsole,
 }
 
 pub struct Input {
@@ -81,7 +82,12 @@ pub struct Input {
 impl Input {
     pub fn tick(&self, window_size: Vec2, game: &Game) {
         while self.get(PlaceNode).consume_click() {
-            game.node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &game.camera))
+            game.node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &game.camera));
+        }
+        while self.get(OpenConsole).consume_click() {
+            let (path, explored) = game.node_manager.a_star(game.node_manager.start_node, game.node_manager.end_node, |a, b| a.distance(b));
+            *game.current_path.borrow_mut() = path;
+            *game.explored_paths.borrow_mut() = explored;
         }
     }
 
@@ -107,6 +113,7 @@ impl Input {
         input.bind(keyboard(KeyA), Left);
         input.bind(keyboard(KeyD), Right);
         input.bind(mouse(MouseButton::Left), PlaceNode);
+        input.bind(keyboard(KeyCode::Enter), OpenConsole);
         input
     }
 

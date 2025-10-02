@@ -1,26 +1,33 @@
+#![allow(unsafe_op_in_unsafe_fn)]
 mod camera;
 mod input;
 mod graphics;
 mod node;
+mod fibonacci_heap;
+mod float;
 
 use crate::camera::Camera;
 use crate::graphics::Graphics;
 use crate::input::Input;
-use crate::node::NodeManager;
+use crate::node::{EdgeId, NodeManager};
 use ggez::conf::{NumSamples, WindowMode, WindowSetup};
 use ggez::event::EventHandler;
 use ggez::glam::Vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, Drawable, Text};
+use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Text};
 use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
 use ggez::*;
+use std::cell::RefCell;
 use std::path::PathBuf;
+use tuple_map::TupleMap2;
 
 struct Game {
     camera: Camera,
     input: Input,
     graphics: Graphics,
     node_manager: NodeManager,
+    current_path: RefCell<Option<Vec<EdgeId>>>,
+    explored_paths: RefCell<Vec<EdgeId>>,
 }
 
 impl Game {
@@ -30,6 +37,8 @@ impl Game {
             input: Input::new(),
             graphics: Graphics::new(ctx)?,
             node_manager: NodeManager::new(),
+            current_path: RefCell::new(None),
+            explored_paths: RefCell::new(vec![]),
         })
     }
 }
@@ -46,21 +55,66 @@ impl EventHandler for Game {
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_proj_matrix() * self.camera.get_view_matrix());
-        canvas.draw(self.graphics.circle(),
-                    DrawParam::new().offset(-Vec2::ZERO)
-                                    .color(Color::BLUE),
-        );
+        self.node_manager.for_all_edges(|edge| {
+            const LENGTH: f32 = 10.0;
+            let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
+            let main_dir = (b - a).normalize();
+            let perp = main_dir.perp();
+            let color = if self.current_path.borrow().as_ref().is_some_and(|v| v.contains(&edge.get_id())) {
+                Color::YELLOW
+            } //
+            else if self.explored_paths.borrow().contains(&edge.get_id()) {
+                Color::WHITE
+            } //
+            else {
+                Color::from_rgb(127, 127, 127)
+            };
+            if let Ok(quad) = Mesh::new_polygon(
+                ctx,
+                DrawMode::fill(),
+                &[
+                    a + 0.5 * LENGTH * perp,
+                    a - 0.5 * LENGTH * perp,
+                    b - 0.5 * LENGTH * perp,
+                    b + 0.5 * LENGTH * perp,
+                ],
+                color,
+            ) {
+                canvas.draw(&quad, DrawParam::new().color(Color::WHITE));
+            }
+        });
         self.node_manager.for_all_nodes(|node| {
-            canvas.draw(self.graphics.circle(),
-                        DrawParam::new().offset(-node.get_pos())
-                                        .color(Color::GREEN),
-            );
+            if self.node_manager.start_node == node.get_id() {
+                canvas.draw(
+                    self.graphics.circle(),
+                    DrawParam::new().scale(Vec2::new(10.0, 10.0))
+                                    .dest(node.get_pos())
+                                    .color(Color::GREEN),
+                );
+            } //
+            else if self.node_manager.end_node == node.get_id() {
+                canvas.draw(
+                    self.graphics.circle(),
+                    DrawParam::new().scale(Vec2::new(10.0, 10.0))
+                                    .dest(node.get_pos())
+                                    .color(Color::BLUE),
+                );
+            } //
+            else {
+                canvas.draw(
+                    self.graphics.circle(),
+                    DrawParam::new().scale(Vec2::new(5.0, 5.0))
+                                    .dest(node.get_pos())
+                                    .color(Color::RED),
+                );
+            }
         });
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
-        canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
-                    DrawParam::new().dest(Vec2::new(5.0, 5.0))
-                                    .color(Color::WHITE),
+        canvas.draw(
+            &Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
+            DrawParam::new().dest(Vec2::new(5.0, 5.0))
+                            .color(Color::WHITE),
         );
         canvas.finish(ctx)?;
         self.input.end_tick();
