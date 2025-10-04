@@ -3,7 +3,6 @@ mod camera;
 mod input;
 mod graphics;
 mod node;
-mod fibonacci_heap;
 mod float;
 
 use crate::camera::Camera;

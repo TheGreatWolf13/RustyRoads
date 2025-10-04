@@ -73,6 +73,18 @@ impl Hash for F32 {
     }
 }
 
+impl From<f32> for F32 {
+    fn from(value: f32) -> Self {
+        Self(value)
+    }
+}
+
+impl From<f64> for F64 {
+    fn from(value: f64) -> Self {
+        Self(value)
+    }
+}
+
 macro_rules! impl_binary_expr {
     ($lhs:ty, $rhs:ty, $trait:ident, $name:ident, $i_lhs:ident, $i_rhs:ident, $e:expr) => {
         impl $trait<$rhs> for $lhs {

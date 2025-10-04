@@ -1,12 +1,13 @@
-use crate::float::F32;
-use delegate::delegate;
+use crate::node::a_star::AStarHeap;
 use ggez::glam::Vec2;
 use std::cell::RefCell;
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::mem;
 use std::mem::MaybeUninit;
+
+mod a_star;
+mod fibonacci_heap;
 
 pub struct Node {
     id: NodeId,
@@ -183,51 +184,8 @@ impl NodeManager {
         }
     }
 
-    // pub fn a_star(&self, start: NodeId, goal: NodeId, h: fn(Vec2, Vec2) -> f32) -> (Option<Vec<EdgeId>>, Vec<EdgeId>) {
-    //     let mut open_set = FibonacciHeap::new();
-    //     let mut nodes = HashMap::new();
-    //     let mut explored_paths = vec![];
-    //     let goal_pos = self.get_node_pos(goal).unwrap();
-    //     nodes.insert(start, open_set.insert(AStarNode(start, h(self.get_node_pos(start).unwrap(), goal_pos))));
-    //     let mut came_from = HashMap::<NodeId, NodeId>::new();
-    //     let mut g_score = HashMap::new();
-    //     g_score.insert(start, 0.0);
-    //     let mut neighbours = vec![];
-    //     println!("Starting A* at {:?} with destination to {:?}", start, goal);
-    //     while !open_set.is_empty() {
-    //         let current = open_set.extract_min().unwrap();
-    //         println!("-------------------Currently looking at {:?}", current);
-    //         if current.0 == goal {
-    //             println!(" --> Reached goal with cost {}!", current.1);
-    //             return (Some(self.reconstruct_path(came_from, goal)), explored_paths);
-    //         }
-    //         self.for_node(current.0, |node| node.get_neighbours(&self, &mut neighbours));
-    //         for (neighbour, path) in &neighbours {
-    //             explored_paths.push(*path);
-    //             let tentative_g_score = g_score[&current.0] + self.get_node_pos(current.0).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) /*/ self.for_edge(*path, |edge| edge.speed).unwrap()*/;
-    //             println!("Neighbour {:?} has a tentative g score of {tentative_g_score}", neighbour);
-    //             if tentative_g_score < *g_score.get(&neighbour).unwrap_or(&f32::INFINITY) {
-    //                 println!("G Score is less than previous one!");
-    //                 came_from.insert(*neighbour, current.0);
-    //                 g_score.insert(*neighbour, tentative_g_score);
-    //                 let f_score = tentative_g_score + h(self.get_node_pos(*neighbour).unwrap(), goal_pos);
-    //                 println!("F score is {f_score}");
-    //                 if !nodes.contains_key(&neighbour) {
-    //                     println!("Inserting node into heap");
-    //                     nodes.insert(*neighbour, open_set.insert(AStarNode(*neighbour, f_score)));
-    //                 } //
-    //                 else {
-    //                     println!("Decreasing score from node already in heap");
-    //                     open_set.decrease_key(&nodes[&neighbour], AStarNode(*neighbour, f_score)).unwrap();
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     (None, explored_paths)
-    // }
-
     pub fn a_star(&self, start: NodeId, goal: NodeId, h: fn(Vec2, Vec2) -> f32) -> (Option<Vec<EdgeId>>, Vec<EdgeId>) {
-        let mut open_set = DumbHeap(HashMap::new());
+        let mut open_set = AStarHeap::new();
         let mut explored_paths = vec![];
         let goal_pos = self.get_node_pos(goal).unwrap();
         open_set.push(start, h(self.get_node_pos(start).unwrap(), goal_pos));
@@ -236,25 +194,19 @@ impl NodeManager {
         g_score.insert(start, 0.0);
         let mut neighbours = vec![];
         while !open_set.is_empty() {
-            let current = open_set.get_min().unwrap();
-            if current.0 == goal {
+            let current = open_set.pop().unwrap();
+            if current == goal {
                 return (Some(self.reconstruct_path(came_from, goal)), explored_paths);
             }
-            self.for_node(current.0, |node| node.get_neighbours(&self, &mut neighbours));
+            self.for_node(current, |node| node.get_neighbours(&self, &mut neighbours));
             for (neighbour, path) in &neighbours {
                 explored_paths.push(*path);
-                let tentative_g_score = g_score[&current.0] + self.get_node_pos(current.0).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) /*/ self.for_edge(*path, |edge| edge.speed).unwrap()*/;
+                let tentative_g_score = g_score[&current] + self.get_node_pos(current).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) /*/ self.for_edge(*path, |edge| edge.speed).unwrap()*/;
                 if tentative_g_score < *g_score.get(&neighbour).unwrap_or(&f32::INFINITY) {
-                    came_from.insert(*neighbour, current.0);
+                    came_from.insert(*neighbour, current);
                     g_score.insert(*neighbour, tentative_g_score);
                     let f_score = tentative_g_score + h(self.get_node_pos(*neighbour).unwrap(), goal_pos);
-                    if !open_set.contains_key(&neighbour) {
-                        open_set.push(*neighbour, f_score);
-                    } //
-                    else {
-                        println!("Decreasing score from node already in heap");
-                        open_set.push(*neighbour, f_score);
-                    }
+                    open_set.push(*neighbour, f_score);
                 }
             }
         }
@@ -296,68 +248,5 @@ impl Edge {
         }
         debug_assert_eq!(self.nodes.1, node, "This edge does not contain the given node!");
         self.nodes.0
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-struct AStarNode(NodeId, F32);
-
-impl Eq for AStarNode {}
-
-impl PartialEq for AStarNode {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Hash for AStarNode {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
-    }
-}
-
-impl Ord for AStarNode {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.1.cmp(&other.1)
-    }
-}
-
-impl PartialOrd for AStarNode {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-struct DumbHeap(HashMap<NodeId, f32>);
-
-impl DumbHeap {
-    fn get_min(&mut self) -> Option<(NodeId, f32)> {
-        let mut node_with_min_score = None;
-        let mut min_score = f32::INFINITY;
-        for (id, score) in &self.0 {
-            if *score < min_score {
-                min_score = *score;
-                node_with_min_score = Some(*id);
-            }
-        }
-        if let Some(id) = node_with_min_score {
-            self.0.remove(&id);
-            return Some((id, min_score));
-        }
-        None
-    }
-
-    delegate! {
-        to self.0 {
-
-            #[call(insert)]
-            fn push(&mut self, id: NodeId, score: f32);
-
-            #[call(is_empty)]
-            fn is_empty(&self) -> bool;
-
-            #[call(contains_key)]
-            fn contains_key(&self, id: &NodeId) -> bool;
-        }
     }
 }
