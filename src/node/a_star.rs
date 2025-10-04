@@ -12,8 +12,8 @@ pub struct AStarHeap<T> {
 impl<T: Copy + Eq + Hash> AStarHeap<T> {
     pub fn new() -> AStarHeap<T> {
         AStarHeap {
-            map: HashMap::new(),
             heap: FibonacciHeap::new(),
+            map: HashMap::new(),
         }
     }
 

@@ -1,8 +1,7 @@
 use crate::node::a_star::AStarHeap;
 use ggez::glam::Vec2;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 
@@ -52,35 +51,47 @@ impl Node {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct NodeId(u64);
 
-impl NodeId {
-    pub fn from_raw(id: u64) -> Self {
+impl FromRawId for NodeId {
+    fn from_raw(id: u64) -> Self {
         NodeId(id)
     }
 }
 
 pub struct NodeManager {
-    nodes: RefCell<Inner<NodeId, Node>>,
-    edges: RefCell<Inner<EdgeId, Edge>>,
+    nodes: Inner<NodeId, Node>,
+    edges: Inner<EdgeId, Edge>,
     pub start_node: NodeId,
     pub end_node: NodeId,
 }
 
-struct Inner<I, N> {
+trait FromRawId {
+    fn from_raw(id: u64) -> Self;
+}
+
+struct Inner<I: FromRawId, N> {
     id_maker: u64,
     map: HashMap<I, N>,
+}
+
+impl<I: FromRawId, N> Inner<I, N> {
+    fn get_id(&mut self) -> I {
+        let id = I::from_raw(self.id_maker);
+        self.id_maker += 1;
+        id
+    }
 }
 
 impl NodeManager {
     pub fn new() -> Self {
         let mut manager = NodeManager {
-            nodes: RefCell::new(Inner {
+            nodes: Inner {
                 map: HashMap::new(),
                 id_maker: 0,
-            }),
-            edges: RefCell::new(Inner {
+            },
+            edges: Inner {
                 map: HashMap::new(),
                 id_maker: 0,
-            }),
+            },
             start_node: NodeId(0),
             end_node: NodeId(0),
         };
@@ -125,32 +136,30 @@ impl NodeManager {
         self.for_node(id, |node| node.get_pos())
     }
 
-    pub fn for_node_mut<T>(&self, id: NodeId, mut f: impl FnMut(&mut Node) -> T) -> Option<T> {
-        if let Some(node) = self.nodes.borrow_mut().map.get_mut(&id) {
+    pub fn for_node_mut<T>(&mut self, id: NodeId, mut f: impl FnMut(&mut Node) -> T) -> Option<T> {
+        if let Some(node) = self.nodes.map.get_mut(&id) {
             return Some(f(node));
         }
         None
     }
 
     pub fn for_node<T>(&self, id: NodeId, mut f: impl FnMut(&Node) -> T) -> Option<T> {
-        if let Some(node) = self.nodes.borrow().map.get(&id) {
+        if let Some(node) = self.nodes.map.get(&id) {
             return Some(f(node));
         }
         None
     }
 
     pub fn for_edge<T>(&self, id: EdgeId, f: impl Fn(&Edge) -> T) -> Option<T> {
-        if let Some(edge) = self.edges.borrow().map.get(&id) {
+        if let Some(edge) = self.edges.map.get(&id) {
             return Some(f(edge));
         }
         None
     }
 
-    pub fn add_node(&self, pos: Vec2) -> NodeId {
-        let nodes = &self.nodes;
-        let id = NodeId(nodes.borrow().id_maker);
-        nodes.borrow_mut().id_maker += 1;
-        nodes.borrow_mut().map.insert(id, Node {
+    pub fn add_node(&mut self, pos: Vec2) -> NodeId {
+        let id = self.nodes.get_id();
+        self.nodes.map.insert(id, Node {
             id,
             pos,
             edges: vec![],
@@ -158,11 +167,9 @@ impl NodeManager {
         id
     }
 
-    pub fn make_edge(&self, node_a: NodeId, node_b: NodeId, speed: f32) -> EdgeId {
-        let edges = &self.edges;
-        let id = EdgeId(edges.borrow().id_maker);
-        edges.borrow_mut().id_maker += 1;
-        edges.borrow_mut().map.insert(id, Edge {
+    pub fn make_edge(&mut self, node_a: NodeId, node_b: NodeId, speed: f32) -> EdgeId {
+        let id = self.edges.get_id();
+        self.edges.map.insert(id, Edge {
             nodes: (node_a, node_b),
             id,
             speed,
@@ -173,13 +180,13 @@ impl NodeManager {
     }
 
     pub fn for_all_nodes(&self, mut f: impl FnMut(&Node)) {
-        for (_, node) in &self.nodes.borrow().map {
+        for (_, node) in &self.nodes.map {
             f(node);
         }
     }
 
     pub fn for_all_edges(&self, mut f: impl FnMut(&Edge)) {
-        for (_, edge) in &self.edges.borrow().map {
+        for (_, edge) in &self.edges.map {
             f(edge);
         }
     }
@@ -196,16 +203,18 @@ impl NodeManager {
         while !open_set.is_empty() {
             let current = open_set.pop().unwrap();
             if current == goal {
+                println!("--------------------------------Finished");
                 return (Some(self.reconstruct_path(came_from, goal)), explored_paths);
             }
             self.for_node(current, |node| node.get_neighbours(&self, &mut neighbours));
             for (neighbour, path) in &neighbours {
                 explored_paths.push(*path);
-                let tentative_g_score = g_score[&current] + self.get_node_pos(current).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) /*/ self.for_edge(*path, |edge| edge.speed).unwrap()*/;
+                let tentative_g_score = g_score[&current] + self.get_node_pos(current).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) / self.for_edge(*path, |edge| edge.speed).unwrap();
                 if tentative_g_score < *g_score.get(&neighbour).unwrap_or(&f32::INFINITY) {
                     came_from.insert(*neighbour, current);
                     g_score.insert(*neighbour, tentative_g_score);
                     let f_score = tentative_g_score + h(self.get_node_pos(*neighbour).unwrap(), goal_pos);
+                    println!("f_score = {f_score}");
                     open_set.push(*neighbour, f_score);
                 }
             }
@@ -226,6 +235,12 @@ impl NodeManager {
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
 pub struct EdgeId(u64);
+
+impl FromRawId for EdgeId {
+    fn from_raw(id: u64) -> Self {
+        EdgeId(id)
+    }
+}
 
 pub struct Edge {
     id: EdgeId,

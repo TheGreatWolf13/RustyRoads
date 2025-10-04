@@ -1,20 +1,15 @@
 use crate::camera::Camera;
 use crate::input::BindingType::{Backward, Forward, Left, OpenConsole, PlaceNode, Right, RotateLeft, RotateRight};
-use crate::Game;
+use crate::node::{EdgeId, NodeManager};
 use enum_map::{Enum, EnumMap};
 use ggez::glam::{Vec2, Vec4};
 use ggez::input::keyboard::KeyCode;
 use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW};
 use ggez::input::mouse::MouseButton;
 use ggez::winit::keyboard::PhysicalKey;
-use std::cell::RefCell;
 use std::collections::HashMap;
 
 pub struct KeyBinding {
-    inner: RefCell<InnerBinding>,
-}
-
-struct InnerBinding {
     click_count: u16,
     is_down: bool,
 }
@@ -22,20 +17,18 @@ struct InnerBinding {
 impl KeyBinding {
     fn new() -> Self {
         KeyBinding {
-            inner: RefCell::new(InnerBinding {
-                click_count: 0,
-                is_down: false,
-            })
+            click_count: 0,
+            is_down: false,
         }
     }
 
     pub fn is_down(&self) -> bool {
-        self.inner.borrow().is_down
+        self.is_down
     }
 
-    pub fn consume_click(&self) -> bool {
-        if self.inner.borrow().click_count > 0 {
-            self.inner.borrow_mut().click_count -= 1;
+    pub fn consume_click(&mut self) -> bool {
+        if self.click_count > 0 {
+            self.click_count -= 1;
             return true;
         }
         false
@@ -80,14 +73,14 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn tick(&self, window_size: Vec2, game: &Game) {
-        while self.get(PlaceNode).consume_click() {
-            game.node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &game.camera));
+    pub fn tick(&mut self, window_size: Vec2, camera: &Camera, node_manager: &mut NodeManager, current_path: &mut Option<Vec<EdgeId>>, explored_paths: &mut Vec<EdgeId>) {
+        while self.get_mut(PlaceNode).consume_click() {
+            node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &camera));
         }
-        while self.get(OpenConsole).consume_click() {
-            let (path, explored) = game.node_manager.a_star(game.node_manager.start_node, game.node_manager.end_node, |a, b| a.distance(b));
-            *game.current_path.borrow_mut() = path;
-            *game.explored_paths.borrow_mut() = explored;
+        while self.get_mut(OpenConsole).consume_click() {
+            let (path, explored) = node_manager.a_star(node_manager.start_node, node_manager.end_node, |a, b| a.distance(b) / 2.0);
+            *current_path = path;
+            *explored_paths = explored;
         }
     }
 
@@ -121,34 +114,38 @@ impl Input {
         &self.bindings[binding]
     }
 
+    pub fn get_mut(&mut self, binding: BindingType) -> &mut KeyBinding {
+        &mut self.bindings[binding]
+    }
+
     fn bind(&mut self, bind: PhysicalBinding, binding: BindingType) {
         self.bindings_by_key.entry(bind).or_insert(Vec::new()).push(binding);
     }
 
-    pub fn handle_down(&self, binding: PhysicalBinding) {
+    pub fn handle_down(&mut self, binding: PhysicalBinding) {
         self.handle_binding(binding, |inner| {
-            inner.borrow_mut().click_count += 1;
-            inner.borrow_mut().is_down = true;
+            inner.click_count += 1;
+            inner.is_down = true;
         });
     }
 
-    fn handle_binding(&self, binding: PhysicalBinding, f: fn(&RefCell<InnerBinding>)) {
+    fn handle_binding(&mut self, binding: PhysicalBinding, f: fn(&mut KeyBinding)) {
         if let Some(bindings) = self.bindings_by_key.get(&binding) {
             for binding_type in bindings {
-                f(&self.bindings[*binding_type].inner);
+                f(&mut self.bindings[*binding_type]);
             }
         }
     }
 
-    pub fn handle_repeat(&self, binding: PhysicalBinding) {
-        self.handle_binding(binding, |inner| {
-            inner.borrow_mut().click_count += 1;
+    pub fn handle_repeat(&mut self, binding: PhysicalBinding) {
+        self.handle_binding(binding, |key_bind| {
+            key_bind.click_count += 1;
         });
     }
 
-    pub fn handle_release(&self, binding: PhysicalBinding) {
-        self.handle_binding(binding, |inner| {
-            inner.borrow_mut().is_down = false;
+    pub fn handle_release(&mut self, binding: PhysicalBinding) {
+        self.handle_binding(binding, |key_bind| {
+            key_bind.is_down = false;
         });
     }
 

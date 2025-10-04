@@ -16,7 +16,6 @@ use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Text};
 use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
 use ggez::*;
-use std::cell::RefCell;
 use std::path::PathBuf;
 use tuple_map::TupleMap2;
 
@@ -25,8 +24,8 @@ struct Game {
     input: Input,
     graphics: Graphics,
     node_manager: NodeManager,
-    current_path: RefCell<Option<Vec<EdgeId>>>,
-    explored_paths: RefCell<Vec<EdgeId>>,
+    current_path: Option<Vec<EdgeId>>,
+    explored_paths: Vec<EdgeId>,
 }
 
 impl Game {
@@ -36,8 +35,8 @@ impl Game {
             input: Input::new(),
             graphics: Graphics::new(ctx)?,
             node_manager: NodeManager::new(),
-            current_path: RefCell::new(None),
-            explored_paths: RefCell::new(vec![]),
+            current_path: None,
+            explored_paths: vec![],
         })
     }
 }
@@ -50,7 +49,7 @@ impl EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         self.camera.tick(&self.input, ctx.gfx.drawable_size().into(), ctx.time.delta().as_secs_f32());
-        self.input.tick(ctx.gfx.drawable_size().into(), &self);
+        self.input.tick(ctx.gfx.drawable_size().into(), &self.camera, &mut self.node_manager, &mut self.current_path, &mut self.explored_paths);
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_proj_matrix() * self.camera.get_view_matrix());
@@ -59,10 +58,10 @@ impl EventHandler for Game {
             let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
             let main_dir = (b - a).normalize();
             let perp = main_dir.perp();
-            let color = if self.current_path.borrow().as_ref().is_some_and(|v| v.contains(&edge.get_id())) {
+            let color = if self.current_path.as_ref().is_some_and(|v| v.contains(&edge.get_id())) {
                 Color::YELLOW
             } //
-            else if self.explored_paths.borrow().contains(&edge.get_id()) {
+            else if self.explored_paths.contains(&edge.get_id()) {
                 Color::WHITE
             } //
             else {
