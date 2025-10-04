@@ -2284,7 +2284,7 @@ dependencies = [
  "delegate",
  "enum-map",
  "ggez",
- "log",
+ "slab",
  "tuple-map",
 ]
 

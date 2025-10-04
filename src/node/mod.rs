@@ -200,10 +200,8 @@ impl NodeManager {
         let mut g_score = HashMap::new();
         g_score.insert(start, 0.0);
         let mut neighbours = vec![];
-        while !open_set.is_empty() {
-            let current = open_set.pop().unwrap();
+        while let Some(current) = open_set.pop() {
             if current == goal {
-                println!("--------------------------------Finished");
                 return (Some(self.reconstruct_path(came_from, goal)), explored_paths);
             }
             self.for_node(current, |node| node.get_neighbours(&self, &mut neighbours));
@@ -214,7 +212,6 @@ impl NodeManager {
                     came_from.insert(*neighbour, current);
                     g_score.insert(*neighbour, tentative_g_score);
                     let f_score = tentative_g_score + h(self.get_node_pos(*neighbour).unwrap(), goal_pos);
-                    println!("f_score = {f_score}");
                     open_set.push(*neighbour, f_score);
                 }
             }

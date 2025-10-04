@@ -1,11 +1,11 @@
 use crate::float::F32;
-use crate::node::fibonacci_heap::{FibonacciHeap, NodePtr};
+use crate::node::fibonacci_heap::{Error, FibonacciHeap, Handle};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
-pub struct AStarHeap<T> {
-    map: HashMap<T, NodePtr<AStarNode<T>>>,
+pub struct AStarHeap<T: Eq> {
+    map: HashMap<T, Handle<AStarNode<T>>>,
     heap: FibonacciHeap<AStarNode<T>>,
 }
 
@@ -22,16 +22,26 @@ impl<T: Copy + Eq + Hash> AStarHeap<T> {
             self.map.insert(node, self.heap.push(AStarNode(node, weight.into())));
         } //
         else {
-            self.heap.decrease_key(&self.map[&node], AStarNode(node, weight.into()));
+            match self.heap.decrease_key(&self.map[&node], AStarNode(node, weight.into())) {
+                Ok(handle) => {
+                    self.map.insert(node, handle);
+                }
+                Err(e) => match e {
+                    Error::KeyNotPresent => {
+                        self.map.insert(node, self.heap.push(AStarNode(node, weight.into())));
+                    }
+                    Error::KeyNotValid => panic!("Should never happen!"),
+                    Error::CannotIncreaseKey => (),
+                }
+            }
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.heap.is_empty()
-    }
-
     pub fn pop(&mut self) -> Option<T> {
-        self.heap.pop().map(|node| node.0)
+        self.heap.pop().map(|a| {
+            self.map.remove(&a.0);
+            a.0
+        })
     }
 }
 
