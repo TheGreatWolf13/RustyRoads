@@ -33,14 +33,14 @@ impl Node {
 
     pub fn get_neighbours(&self, node_manager: &NodeManager, vec: &mut Vec<(NodeId, EdgeId)>) {
         vec.clear();
-        for node_id in self.edges.iter().map(|edge_id| (node_manager.for_edge(*edge_id, |edge| edge.get_other_node(self.id)).unwrap(), *edge_id)) {
+        for node_id in self.edges.iter().map(|edge_id| (node_manager.get_edge(*edge_id).unwrap().get_other_node(self.id), *edge_id)) {
             vec.push(node_id);
         }
     }
 
     pub fn find_edge(&self, other_node: NodeId, node_manager: &NodeManager) -> Option<EdgeId> {
         for edge_id in &self.edges {
-            if node_manager.for_edge(*edge_id, |edge| edge.get_other_node(self.id)).unwrap() == other_node {
+            if node_manager.get_edge(*edge_id).unwrap().get_other_node(self.id) == other_node {
                 return Some(*edge_id);
             }
         }
@@ -132,29 +132,20 @@ impl NodeManager {
         manager
     }
 
+    pub fn get_node(&self, id: NodeId) -> Option<&Node> {
+        self.nodes.map.get(&id)
+    }
+
+    pub fn get_node_mut(&mut self, id: NodeId) -> Option<&mut Node> {
+        self.nodes.map.get_mut(&id)
+    }
+
     pub fn get_node_pos(&self, id: NodeId) -> Option<Vec2> {
-        self.for_node(id, |node| node.get_pos())
+        self.get_node(id).map(|node| node.pos)
     }
 
-    pub fn for_node_mut<T>(&mut self, id: NodeId, mut f: impl FnMut(&mut Node) -> T) -> Option<T> {
-        if let Some(node) = self.nodes.map.get_mut(&id) {
-            return Some(f(node));
-        }
-        None
-    }
-
-    pub fn for_node<T>(&self, id: NodeId, mut f: impl FnMut(&Node) -> T) -> Option<T> {
-        if let Some(node) = self.nodes.map.get(&id) {
-            return Some(f(node));
-        }
-        None
-    }
-
-    pub fn for_edge<T>(&self, id: EdgeId, f: impl Fn(&Edge) -> T) -> Option<T> {
-        if let Some(edge) = self.edges.map.get(&id) {
-            return Some(f(edge));
-        }
-        None
+    pub fn get_edge(&self, id: EdgeId) -> Option<&Edge> {
+        self.edges.map.get(&id)
     }
 
     pub fn add_node(&mut self, pos: Vec2) -> NodeId {
@@ -174,8 +165,8 @@ impl NodeManager {
             id,
             speed,
         });
-        self.for_node_mut(node_a, |node| node.edges.push(id));
-        self.for_node_mut(node_b, |node| node.edges.push(id));
+        self.get_node_mut(node_a).unwrap().edges.push(id);
+        self.get_node_mut(node_b).unwrap().edges.push(id);
         id
     }
 
@@ -204,10 +195,10 @@ impl NodeManager {
             if current == goal {
                 return (Some(self.reconstruct_path(came_from, goal)), explored_paths);
             }
-            self.for_node(current, |node| node.get_neighbours(&self, &mut neighbours));
+            self.get_node(current).map(|node| node.get_neighbours(&self, &mut neighbours));
             for (neighbour, path) in &neighbours {
                 explored_paths.push(*path);
-                let tentative_g_score = g_score[&current] + self.get_node_pos(current).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) / self.for_edge(*path, |edge| edge.speed).unwrap();
+                let tentative_g_score = g_score[&current] + self.get_node_pos(current).unwrap().distance(self.get_node_pos(*neighbour).unwrap()) / self.get_edge(*path).unwrap().speed;
                 if tentative_g_score < *g_score.get(&neighbour).unwrap_or(&f32::INFINITY) {
                     came_from.insert(*neighbour, current);
                     g_score.insert(*neighbour, tentative_g_score);
@@ -223,7 +214,7 @@ impl NodeManager {
         let mut vec = vec![];
         let mut last_node = goal;
         while let Some(next_node) = came_from.get(&last_node) {
-            vec.push(self.for_node(last_node, |node| node.find_edge(*next_node, &self)).unwrap().unwrap());
+            vec.push(self.get_node(last_node).unwrap().find_edge(*next_node, &self).unwrap());
             last_node = *next_node;
         }
         vec
