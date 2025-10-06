@@ -19,6 +19,8 @@ use ggez::*;
 use std::path::PathBuf;
 use tuple_map::TupleMap2;
 
+const CITY_WIDTH: f32 = 100_000.0;
+
 struct Game {
     camera: Camera,
     input: Input,
@@ -110,8 +112,18 @@ impl EventHandler for Game {
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
         canvas.draw(
+            &Text::new(format!("X: {}", self.camera.get_pos().x)), 
+                       DrawParam::new().dest(Vec2::new(5.0, 5.0))
+                           .color(Color::WHITE),
+        );
+        canvas.draw(
+            &Text::new(format!("Y: {}", self.camera.get_pos().y)),
+            DrawParam::new().dest(Vec2::new(5.0, 10.0))
+                .color(Color::WHITE),
+        );
+        canvas.draw(
             &Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
-            DrawParam::new().dest(Vec2::new(5.0, 5.0))
+            DrawParam::new().dest(Vec2::new(5.0, 15.0))
                             .color(Color::WHITE),
         );
         canvas.finish(ctx)?;

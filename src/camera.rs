@@ -2,6 +2,7 @@ use crate::input::BindingType::{Backward, Forward, Left, Right, RotateLeft, Rota
 use crate::input::Input;
 use ggez::glam::{Mat2, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
+use crate::CITY_WIDTH;
 
 const ACCELERATION: f32 = 8.0 / 9.0;
 const DAMPING: f32 = 0.9;
@@ -34,6 +35,10 @@ impl Camera {
         cam.adjust_projection(window_size);
         cam.adjust_view();
         cam
+    }
+
+    pub fn get_pos(&self) -> Vec2 {
+        self.pos
     }
 
     pub fn get_proj_matrix(&self) -> Mat4 {
@@ -96,6 +101,7 @@ impl Camera {
         self.velocity *= DAMPING * delta_time;
         let last_pos = self.pos;
         self.pos += self.velocity * self.zoom * delta_time;
+        self.pos = self.pos.clamp(Vec2::new(-CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, CITY_WIDTH / 2.0));
         if last_roll != self.roll || last_pos != self.pos {
             self.adjust_view();
         }
