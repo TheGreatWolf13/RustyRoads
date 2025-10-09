@@ -1,17 +1,17 @@
 use crate::node::a_star::AStarHeap;
+use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
-use crate::{CITY_WIDTH};
 
 mod a_star;
 mod fibonacci_heap;
 
 const CHUNK_SIZE: f32 = 100.0;
-const MAX_POS_COMP: i32 = (CITY_WIDTH / 2.0) / CHUNK_SIZE as i32 - 1;
-const MIN_POS_COMP: i32 = (-CITY_WIDTH / 2.0) / CHUNK_SIZE as i32;
+const MAX_POS_COMP: i32 = ((CITY_WIDTH / 2.0) / CHUNK_SIZE) as i32 - 1;
+const MIN_POS_COMP: i32 = ((-CITY_WIDTH / 2.0) / CHUNK_SIZE) as i32;
 const MIN_POS: IVec2 = IVec2::splat(MIN_POS_COMP);
 const MAX_POS: IVec2 = IVec2::splat(MAX_POS_COMP);
 
@@ -29,12 +29,12 @@ impl ChunkPos {
         Self(IVec2::new(x, y))
     }
 
-    const fn from_world_pos(world_pos: Vec2) -> Self {
+    fn from_world_pos(world_pos: Vec2) -> Self {
         let pos = (world_pos / CHUNK_SIZE).floor();
         pos.as_ivec2().clamp(MIN_POS, MAX_POS).into()
     }
 
-    const fn with_offset(&self, offset: IVec2) -> Self {
+    fn with_offset(&self, offset: IVec2) -> Self {
         Self(self.0 + offset)
     }
 
@@ -90,7 +90,7 @@ impl ChunkPosArea {
         }
     }
 
-    fn into_iter(self) -> impl Iterator<Item = ChunkPos> {
+    fn into_iter(self) -> impl Iterator<Item=ChunkPos> {
         ChunkPosAreaIterator::new(self)
     }
 }
@@ -121,20 +121,24 @@ impl Iterator for ChunkPosAreaIterator {
         match self {
             Self::Zero => None,
             Self::One(pos) => {
+                let ret = Some(*pos);
                 *self = Self::Zero;
-                Some(*pos)
+                ret
             }
             Self::Two(a, b) => {
+                let ret = Some(*b);
                 *self = Self::One(*a);
-                Some(*b)
+                ret
             }
             Self::Three(a, b, c) => {
+                let ret = Some(*c);
                 *self = Self::Two(*a, *b);
-                Some(*c)
+                ret
             }
             Self::Four(a, b, c, d) => {
+                let ret = Some(*d);
                 *self = Self::Three(*a, *b, *c);
-                Some(*d)
+                ret
             }
         }
     }
