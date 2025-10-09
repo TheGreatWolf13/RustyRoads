@@ -44,10 +44,10 @@ impl Graphics {
             bounds: {
                 let mut builder = MeshBuilder::new();
                 Mesh::from_data(ctx, {
-                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true)?;
-                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true)?;
-                    make_dashed_line(&mut builder, Vec2::new(CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true)?;
-                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(-CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true)?;
+                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true, true)?;
+                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true, true)?;
+                    make_dashed_line(&mut builder, Vec2::new(CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true, true)?;
+                    make_dashed_line(&mut builder, Vec2::new(-CITY_WIDTH / 2.0, -CITY_WIDTH / 2.0), Vec2::new(-CITY_WIDTH / 2.0, CITY_WIDTH / 2.0), 10.0, Color::WHITE, 50.0, 50.0, true, true)?;
                     builder.build()
                 })
             },
@@ -63,7 +63,7 @@ impl Graphics {
     }
 }
 
-fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32, colour: Color, dash_len: f32, spacing: f32, butt: bool) -> GameResult {
+fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32, colour: Color, dash_len: f32, spacing: f32, butt: bool, cramped: bool) -> GameResult {
     let mut len = (to - from).length();
     if butt {
         len += width / 2.0;
@@ -81,7 +81,13 @@ fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32,
     else {
         //We have enough space
         let rem_len = len - dash_len;
-        let times = (rem_len / (dash_len + spacing)).floor();
+        let mut times = (rem_len / (dash_len + spacing));
+        if cramped {
+            times = times.ceil();
+        } //
+        else {
+            times = times.floor();
+        }
         let actual_spacing = (rem_len - times * dash_len) / times;
         let dir = (to - from).normalize();
         builder.line(&[from, from + dir * dash_len], width, colour)?;
