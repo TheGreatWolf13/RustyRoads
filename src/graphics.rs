@@ -81,7 +81,7 @@ fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32,
     else {
         //We have enough space
         let rem_len = len - dash_len;
-        let mut times = (rem_len / (dash_len + spacing));
+        let mut times = rem_len / (dash_len + spacing);
         if cramped {
             times = times.ceil();
         } //
