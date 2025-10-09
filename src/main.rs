@@ -109,6 +109,7 @@ impl EventHandler for Game {
                 );
             }
         });
+        canvas.draw(self.graphics.bounds(), DrawParam::new());
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
         canvas.draw(
