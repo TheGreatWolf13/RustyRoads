@@ -8,7 +8,7 @@ mod float;
 use crate::camera::Camera;
 use crate::graphics::Graphics;
 use crate::input::Input;
-use crate::node::{EdgeId, NodeManager};
+use crate::node::{EdgeId, Node, NodeManager};
 use ggez::conf::{NumSamples, WindowMode, WindowSetup};
 use ggez::event::EventHandler;
 use ggez::glam::Vec2;
@@ -87,7 +87,7 @@ impl EventHandler for Game {
             if self.node_manager.start_node == node.get_id() {
                 canvas.draw(
                     self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(10.0, 10.0))
+                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
                                     .dest(node.get_pos())
                                     .color(Color::GREEN),
                 );
@@ -95,7 +95,7 @@ impl EventHandler for Game {
             else if self.node_manager.end_node == node.get_id() {
                 canvas.draw(
                     self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(10.0, 10.0))
+                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
                                     .dest(node.get_pos())
                                     .color(Color::BLUE),
                 );
@@ -103,7 +103,7 @@ impl EventHandler for Game {
             else {
                 canvas.draw(
                     self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(5.0, 5.0))
+                    DrawParam::new().scale(Vec2::new(Node::radius() / 2.0, Node::radius() / 2.0))
                                     .dest(node.get_pos())
                                     .color(Color::RED),
                 );

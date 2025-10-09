@@ -1,12 +1,144 @@
 use crate::node::a_star::AStarHeap;
-use ggez::glam::Vec2;
+use ggez::glam::{IVec2, Vec2};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
+use crate::{CITY_WIDTH};
 
 mod a_star;
 mod fibonacci_heap;
+
+const CHUNK_SIZE: f32 = 100.0;
+const MAX_POS_COMP: i32 = (CITY_WIDTH / 2.0) / CHUNK_SIZE as i32 - 1;
+const MIN_POS_COMP: i32 = (-CITY_WIDTH / 2.0) / CHUNK_SIZE as i32;
+const MIN_POS: IVec2 = IVec2::splat(MIN_POS_COMP);
+const MAX_POS: IVec2 = IVec2::splat(MAX_POS_COMP);
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+struct ChunkPos(IVec2);
+
+impl From<IVec2> for ChunkPos {
+    fn from(pos: IVec2) -> Self {
+        ChunkPos(pos)
+    }
+}
+
+impl ChunkPos {
+    const fn new(x: i32, y: i32) -> Self {
+        Self(IVec2::new(x, y))
+    }
+
+    const fn from_world_pos(world_pos: Vec2) -> Self {
+        let pos = (world_pos / CHUNK_SIZE).floor();
+        pos.as_ivec2().clamp(MIN_POS, MAX_POS).into()
+    }
+
+    const fn with_offset(&self, offset: IVec2) -> Self {
+        Self(self.0 + offset)
+    }
+
+    fn get_area(world_pos: Vec2) -> ChunkPosArea {
+        let pos = world_pos / CHUNK_SIZE;
+        let max = pos.ceil();
+        let min = pos.floor();
+        let max_diff = max - pos;
+        let min_diff = pos - min;
+        let main_pos = min.as_ivec2().clamp(MIN_POS, MAX_POS);
+        let mut area = ChunkPosArea::new(main_pos.into());
+        if max_diff.x < min_diff.x {
+            if main_pos.x < MAX_POS_COMP {
+                area = area.expand(IVec2::X);
+            }
+        } //
+        else {
+            if main_pos.x > MIN_POS_COMP {
+                area = area.expand(IVec2::NEG_X);
+            }
+        }
+        if max_diff.y < min_diff.y {
+            if main_pos.y < MAX_POS_COMP {
+                area = area.expand(IVec2::Y);
+            }
+        } //
+        else {
+            if main_pos.y > MIN_POS_COMP {
+                area = area.expand(IVec2::NEG_Y);
+            }
+        }
+        area
+    }
+}
+
+#[derive(Copy, Clone)]
+enum ChunkPosArea {
+    One(ChunkPos),
+    Two(ChunkPos, ChunkPos),
+    Four(ChunkPos, ChunkPos, ChunkPos, ChunkPos),
+}
+
+impl ChunkPosArea {
+    fn new(pos: ChunkPos) -> Self {
+        ChunkPosArea::One(pos)
+    }
+
+    fn expand(self, offset: IVec2) -> Self {
+        match self {
+            ChunkPosArea::One(pos) => ChunkPosArea::Two(pos, pos.with_offset(offset)),
+            ChunkPosArea::Two(a, b) => ChunkPosArea::Four(a, b, a.with_offset(offset), b.with_offset(offset)),
+            ChunkPosArea::Four(_, _, _, _) => panic!("Already fully defined!")
+        }
+    }
+
+    fn into_iter(self) -> impl Iterator<Item = ChunkPos> {
+        ChunkPosAreaIterator::new(self)
+    }
+}
+
+#[derive(Copy, Clone)]
+enum ChunkPosAreaIterator {
+    Zero,
+    One(ChunkPos),
+    Two(ChunkPos, ChunkPos),
+    Three(ChunkPos, ChunkPos, ChunkPos),
+    Four(ChunkPos, ChunkPos, ChunkPos, ChunkPos),
+}
+
+impl ChunkPosAreaIterator {
+    fn new(area: ChunkPosArea) -> Self {
+        match area {
+            ChunkPosArea::One(a) => Self::One(a),
+            ChunkPosArea::Two(a, b) => Self::Two(a, b),
+            ChunkPosArea::Four(a, b, c, d) => Self::Four(a, b, c, d),
+        }
+    }
+}
+
+impl Iterator for ChunkPosAreaIterator {
+    type Item = ChunkPos;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Zero => None,
+            Self::One(pos) => {
+                *self = Self::Zero;
+                Some(*pos)
+            }
+            Self::Two(a, b) => {
+                *self = Self::One(*a);
+                Some(*b)
+            }
+            Self::Three(a, b, c) => {
+                *self = Self::Two(*a, *b);
+                Some(*c)
+            }
+            Self::Four(a, b, c, d) => {
+                *self = Self::Three(*a, *b, *c);
+                Some(*d)
+            }
+        }
+    }
+}
 
 pub struct Node {
     id: NodeId,
@@ -46,6 +178,11 @@ impl Node {
         }
         None
     }
+
+    #[inline(always)]
+    pub const fn radius() -> f32 {
+        10.0
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
@@ -60,6 +197,7 @@ impl FromRawId for NodeId {
 pub struct NodeManager {
     nodes: Inner<NodeId, Node>,
     edges: Inner<EdgeId, Edge>,
+    node_lookup: HashMap<ChunkPos, Vec<NodeId>>,
     pub start_node: NodeId,
     pub end_node: NodeId,
 }
@@ -92,6 +230,7 @@ impl NodeManager {
                 map: HashMap::new(),
                 id_maker: 0,
             },
+            node_lookup: HashMap::new(),
             start_node: NodeId(0),
             end_node: NodeId(0),
         };
@@ -218,6 +357,19 @@ impl NodeManager {
             last_node = *next_node;
         }
         vec
+    }
+
+    pub fn try_node_collision(&self, pos: Vec2) -> Option<NodeId> {
+        for chunk_pos in ChunkPos::get_area(pos).into_iter() {
+            if let Some(vec) = self.node_lookup.get(&chunk_pos) {
+                for id in vec {
+                    if self.get_node_pos(*id).unwrap().distance_squared(pos) <= Node::radius() * Node::radius() {
+                        return Some(*id);
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
