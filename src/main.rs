@@ -121,21 +121,9 @@ impl EventHandler for Game {
         canvas.draw(self.graphics.bounds(), DrawParam::new());
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
-        canvas.draw(
-            &Text::new(format!("X: {:.1}", self.camera.get_pos().x)),
-            DrawParam::new().dest(Vec2::new(5.0, 5.0))
-                            .color(Color::WHITE),
-        );
-        canvas.draw(
-            &Text::new(format!("Y: {:.1}", self.camera.get_pos().y)),
-            DrawParam::new().dest(Vec2::new(5.0, 20.0))
-                            .color(Color::WHITE),
-        );
-        canvas.draw(
-            &Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())),
-            DrawParam::new().dest(Vec2::new(5.0, 35.0))
-                            .color(Color::WHITE),
-        );
+        canvas.draw(&Text::new(format!("X: {:.1}", self.camera.get_pos().x)), DrawParam::new().dest(Vec2::new(5.0, 5.0)).color(Color::WHITE));
+        canvas.draw(&Text::new(format!("Y: {:.1}", self.camera.get_pos().y)), DrawParam::new().dest(Vec2::new(5.0, 20.0)).color(Color::WHITE));
+        canvas.draw(&Text::new(format!("Zoom x{}", 1.0 / self.camera.get_zoom())), DrawParam::new().dest(Vec2::new(5.0, 35.0)).color(Color::WHITE));
         canvas.finish(ctx)?;
         self.input.end_tick();
         Ok(())
