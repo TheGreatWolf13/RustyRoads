@@ -1,3 +1,4 @@
+use crate::math::Sqr;
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
@@ -6,7 +7,6 @@ use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::num::NonZeroU64;
-use crate::math::Sqr;
 
 mod a_star;
 mod fibonacci_heap;
@@ -222,8 +222,7 @@ struct Inner<I: FromRawId, N> {
 impl<I: FromRawId, N> Inner<I, N> {
     fn get_id(&mut self) -> I {
         self.id_maker += 1;
-        let id = I::from_raw(self.id_maker.into());
-        id
+        I::from_raw(NonZeroU64::new(self.id_maker).unwrap())
     }
 }
 
@@ -296,6 +295,14 @@ impl NodeManager {
         self.edges.map.get(&id)
     }
 
+    pub fn get_nodes(&self) -> impl Iterator<Item=&Node> {
+        self.nodes.map.values().into_iter()
+    }
+
+    pub fn get_edges(&self) -> impl Iterator<Item=&Edge> {
+        self.edges.map.values().into_iter()
+    }
+
     pub fn add_node(&mut self, pos: Vec2) -> NodeId {
         let id = self.nodes.get_id();
         self.nodes.map.insert(id, Node {
@@ -317,18 +324,6 @@ impl NodeManager {
         self.get_node_mut(node_a).unwrap().edges.push(id);
         self.get_node_mut(node_b).unwrap().edges.push(id);
         id
-    }
-
-    pub fn for_all_nodes(&self, mut f: impl FnMut(&Node)) {
-        for (_, node) in &self.nodes.map {
-            f(node);
-        }
-    }
-
-    pub fn for_all_edges(&self, mut f: impl FnMut(&Edge)) {
-        for (_, edge) in &self.edges.map {
-            f(edge);
-        }
     }
 
     pub fn a_star(&self, start: NodeId, goal: NodeId, h: fn(Vec2, Vec2) -> f32) -> (Option<Vec<EdgeId>>, Vec<EdgeId>) {

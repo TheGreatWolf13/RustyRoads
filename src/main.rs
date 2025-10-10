@@ -16,9 +16,9 @@ use ggez::glam::Vec2;
 use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Text};
 use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
+use ggez::timer::TimeContext;
 use ggez::*;
 use std::path::PathBuf;
-use ggez::timer::TimeContext;
 use tuple_map::TupleMap2;
 
 const CITY_WIDTH: f32 = 100_000.0;
@@ -78,12 +78,12 @@ impl EventHandler for Game {
         ctx.gfx.set_window_title(&format!("{} FPS", ctx.time.fps() as u32));
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_proj_matrix() * self.camera.get_view_matrix());
-        self.node_manager.for_all_edges(|edge| {
+        for edge in self.node_manager.get_edges() {
             const LENGTH: f32 = 10.0;
             let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
             let main_dir = (b - a).normalize();
             let perp = main_dir.perp();
-            let color = if let Some(path) = &self.current_path && path.contains(*edge.get_id()) {
+            let color = if self.current_path.as_ref().is_some_and(|path| path.contains(&edge.get_id())) {
                 Color::YELLOW
             } //
             else if self.explored_paths.contains(&edge.get_id()) {
@@ -103,8 +103,8 @@ impl EventHandler for Game {
                 ],
                 color,
             )?, DrawParam::new().color(Color::WHITE));
-        });
-        self.node_manager.for_all_nodes(|node| {
+        }
+        for node in self.node_manager.get_nodes() {
             if let Some(start) = self.node_manager.start_node && start == node.get_id() {
                 self.draw_node(&mut canvas, node, Node::radius(), Color::GREEN);
             } //
@@ -117,7 +117,7 @@ impl EventHandler for Game {
             else {
                 self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::RED);
             }
-        });
+        }
         canvas.draw(self.graphics.bounds(), DrawParam::new());
         canvas.finish(ctx)?;
         let mut canvas = Canvas::from_frame(ctx, None);
