@@ -85,7 +85,7 @@ impl EventHandler for Game {
             }
         });
         self.node_manager.for_all_nodes(|node| {
-            if self.node_manager.start_node == node.get_id() {
+            if let Some(start) = self.node_manager.start_node && start == node.get_id() {
                 canvas.draw(
                     self.graphics.circle(),
                     DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
@@ -93,12 +93,20 @@ impl EventHandler for Game {
                                     .color(Color::GREEN),
                 );
             } //
-            else if self.node_manager.end_node == node.get_id() {
+            else if let Some(end) = self.node_manager.end_node && end == node.get_id() {
                 canvas.draw(
                     self.graphics.circle(),
                     DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
                                     .dest(node.get_pos())
                                     .color(Color::BLUE),
+                );
+            } //
+            else if let Some(selected) = self.node_manager.selected_node && selected == node.get_id() {
+                canvas.draw(
+                    self.graphics.circle(),
+                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
+                        .dest(node.get_pos())
+                        .color(Color::YELLOW),
                 );
             } //
             else {

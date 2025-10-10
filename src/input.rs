@@ -1,5 +1,5 @@
 use crate::camera::Camera;
-use crate::input::BindingType::{Backward, Forward, Left, OpenConsole, PlaceNode, Right, RotateLeft, RotateRight};
+use crate::input::BindingType::{Backward, Forward, Left, Pathfind, PlaceNode, Right, RotateLeft, RotateRight, SelectNode};
 use crate::node::{EdgeId, NodeManager};
 use enum_map::{Enum, EnumMap};
 use ggez::glam::{Vec2, Vec4};
@@ -62,7 +62,8 @@ pub enum BindingType {
     Right,
     Left,
     PlaceNode,
-    OpenConsole,
+    Pathfind,
+    SelectNode
 }
 
 pub struct Input {
@@ -77,10 +78,17 @@ impl Input {
         while self.get_mut(PlaceNode).consume_click() {
             node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &camera));
         }
-        while self.get_mut(OpenConsole).consume_click() {
-            let (path, explored) = node_manager.a_star(node_manager.start_node, node_manager.end_node, |a, b| a.distance(b) / 2.0);
-            *current_path = path;
-            *explored_paths = explored;
+        while self.get_mut(Pathfind).consume_click() {
+            if let Some(start) = node_manager.start_node && let Some(end) = node_manager.end_node {
+                let (path, explored) = node_manager.a_star(start, end, |a, b| a.distance(b) / 2.0);
+                *current_path = path;
+                *explored_paths = explored;
+            }
+        }
+        while self.get_mut(SelectNode).consume_click() {
+           if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
+               node_manager.selected_node = Some(id);
+           }
         }
     }
 
@@ -106,7 +114,8 @@ impl Input {
         input.bind(keyboard(KeyA), Left);
         input.bind(keyboard(KeyD), Right);
         input.bind(mouse(MouseButton::Left), PlaceNode);
-        input.bind(keyboard(KeyCode::Enter), OpenConsole);
+        input.bind(keyboard(KeyCode::Enter), Pathfind);
+        input.bind(mouse(MouseButton::Right), SelectNode);
         input
     }
 

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
+use std::num::NonZeroU64;
 use crate::math::Sqr;
 
 mod a_star;
@@ -191,10 +192,10 @@ impl Node {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct NodeId(u64);
+pub struct NodeId(NonZeroU64);
 
 impl FromRawId for NodeId {
-    fn from_raw(id: u64) -> Self {
+    fn from_raw(id: NonZeroU64) -> Self {
         NodeId(id)
     }
 }
@@ -203,12 +204,13 @@ pub struct NodeManager {
     nodes: Inner<NodeId, Node>,
     edges: Inner<EdgeId, Edge>,
     node_lookup: HashMap<ChunkPos, Vec<NodeId>>,
-    pub start_node: NodeId,
-    pub end_node: NodeId,
+    pub start_node: Option<NodeId>,
+    pub end_node: Option<NodeId>,
+    pub selected_node: Option<NodeId>,
 }
 
 trait FromRawId {
-    fn from_raw(id: u64) -> Self;
+    fn from_raw(id: NonZeroU64) -> Self;
 }
 
 struct Inner<I: FromRawId, N> {
@@ -218,8 +220,8 @@ struct Inner<I: FromRawId, N> {
 
 impl<I: FromRawId, N> Inner<I, N> {
     fn get_id(&mut self) -> I {
-        let id = I::from_raw(self.id_maker);
         self.id_maker += 1;
+        let id = I::from_raw(self.id_maker.into());
         id
     }
 }
@@ -236,8 +238,9 @@ impl NodeManager {
                 id_maker: 0,
             },
             node_lookup: HashMap::new(),
-            start_node: NodeId(0),
-            end_node: NodeId(0),
+            start_node: None,
+            end_node: None,
+            selected_node: None,
         };
         const RADIUS: i32 = 5;
         const LEN: usize = 2 * RADIUS as usize + 1;
@@ -271,8 +274,8 @@ impl NodeManager {
                 last_node = Some(node);
             }
         }
-        manager.start_node = ids[0][0];
-        manager.end_node = ids[(LEN - 1) / 2][LEN - 1];
+        manager.start_node = Some(ids[0][0]);
+        manager.end_node = Some(ids[(LEN - 1) / 2][LEN - 1]);
         manager
     }
 
@@ -299,6 +302,7 @@ impl NodeManager {
             pos,
             edges: vec![],
         });
+        self.node_lookup.entry(ChunkPos::from_world_pos(pos)).or_insert(Vec::new()).push(id);
         id
     }
 
@@ -379,10 +383,10 @@ impl NodeManager {
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
-pub struct EdgeId(u64);
+pub struct EdgeId(NonZeroU64);
 
 impl FromRawId for EdgeId {
-    fn from_raw(id: u64) -> Self {
+    fn from_raw(id: NonZeroU64) -> Self {
         EdgeId(id)
     }
 }
