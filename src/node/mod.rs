@@ -204,6 +204,7 @@ pub struct NodeManager {
     nodes: Inner<NodeId, Node>,
     edges: Inner<EdgeId, Edge>,
     node_lookup: HashMap<ChunkPos, Vec<NodeId>>,
+    //todo rustc-hash
     pub start_node: Option<NodeId>,
     pub end_node: Option<NodeId>,
     pub selected_node: Option<NodeId>,
