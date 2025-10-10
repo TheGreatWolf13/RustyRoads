@@ -18,9 +18,11 @@ use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
 use ggez::*;
 use std::path::PathBuf;
+use ggez::timer::TimeContext;
 use tuple_map::TupleMap2;
 
 const CITY_WIDTH: f32 = 100_000.0;
+const TPS: u32 = 20;
 
 struct Game {
     camera: Camera,
@@ -29,6 +31,22 @@ struct Game {
     node_manager: NodeManager,
     current_path: Option<Vec<EdgeId>>,
     explored_paths: Vec<EdgeId>,
+}
+
+trait Lerp {
+    type Output;
+
+    fn lerp(self, time: &TimeContext) -> Self::Output;
+}
+
+impl Lerp for (f32, f32) {
+    type Output = f32;
+
+    fn lerp(self, time: &TimeContext) -> Self::Output {
+        let remainder = time.remaining_update_time().as_secs_f32();
+        let alpha = remainder / TPS as f32;
+        self.0 + (self.1 - self.0) * alpha
+    }
 }
 
 impl Game {
@@ -50,7 +68,7 @@ impl Game {
 
 impl EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        while ctx.time.check_update_time(20) {}
+        while ctx.time.check_update_time(TPS) {}
         Ok(())
     }
 
@@ -65,7 +83,7 @@ impl EventHandler for Game {
             let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
             let main_dir = (b - a).normalize();
             let perp = main_dir.perp();
-            let color = if self.current_path.as_ref().is_some_and(|v| v.contains(&edge.get_id())) {
+            let color = if let Some(path) = &self.current_path && path.contains(*edge.get_id()) {
                 Color::YELLOW
             } //
             else if self.explored_paths.contains(&edge.get_id()) {
@@ -74,7 +92,7 @@ impl EventHandler for Game {
             else {
                 Color::from_rgb(127, 127, 127)
             };
-            if let Ok(quad) = Mesh::new_polygon(
+            canvas.draw(&Mesh::new_polygon(
                 ctx,
                 DrawMode::fill(),
                 &[
@@ -84,9 +102,7 @@ impl EventHandler for Game {
                     b + 0.5 * LENGTH * perp,
                 ],
                 color,
-            ) {
-                canvas.draw(&quad, DrawParam::new().color(Color::WHITE));
-            }
+            )?, DrawParam::new().color(Color::WHITE));
         });
         self.node_manager.for_all_nodes(|node| {
             if let Some(start) = self.node_manager.start_node && start == node.get_id() {
