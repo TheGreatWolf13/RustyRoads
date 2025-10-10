@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
+use crate::math::Sqr;
 
 mod a_star;
 mod fibonacci_heap;
@@ -367,7 +368,7 @@ impl NodeManager {
         for chunk_pos in ChunkPos::get_area(pos).into_iter() {
             if let Some(vec) = self.node_lookup.get(&chunk_pos) {
                 for id in vec {
-                    if self.get_node_pos(*id).unwrap().distance_squared(pos) <= Node::radius() * Node::radius() {
+                    if self.get_node_pos(*id).unwrap().distance_squared(pos) <= Node::radius().sqr() {
                         return Some(*id);
                     }
                 }

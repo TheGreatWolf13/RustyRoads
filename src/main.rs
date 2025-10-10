@@ -4,6 +4,7 @@ mod input;
 mod graphics;
 mod node;
 mod float;
+mod math;
 
 use crate::camera::Camera;
 use crate::graphics::Graphics;
