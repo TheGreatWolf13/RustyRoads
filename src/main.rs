@@ -42,6 +42,10 @@ impl Game {
             explored_paths: vec![],
         })
     }
+
+    fn draw_node(&self, canvas: &mut Canvas, node: &Node, radius: f32, colour: Color) {
+        canvas.draw(self.graphics.circle(), DrawParam::new().scale(Vec2::splat(radius)).dest(node.get_pos()).color(colour));
+    }
 }
 
 impl EventHandler for Game {
@@ -86,36 +90,16 @@ impl EventHandler for Game {
         });
         self.node_manager.for_all_nodes(|node| {
             if let Some(start) = self.node_manager.start_node && start == node.get_id() {
-                canvas.draw(
-                    self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
-                                    .dest(node.get_pos())
-                                    .color(Color::GREEN),
-                );
+                self.draw_node(&mut canvas, node, Node::radius(), Color::GREEN);
             } //
             else if let Some(end) = self.node_manager.end_node && end == node.get_id() {
-                canvas.draw(
-                    self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
-                                    .dest(node.get_pos())
-                                    .color(Color::BLUE),
-                );
+                self.draw_node(&mut canvas, node, Node::radius(), Color::BLUE);
             } //
             else if let Some(selected) = self.node_manager.selected_node && selected == node.get_id() {
-                canvas.draw(
-                    self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(Node::radius(), Node::radius()))
-                        .dest(node.get_pos())
-                        .color(Color::YELLOW),
-                );
+                self.draw_node(&mut canvas, node, Node::radius(), Color::YELLOW);
             } //
             else {
-                canvas.draw(
-                    self.graphics.circle(),
-                    DrawParam::new().scale(Vec2::new(Node::radius() / 2.0, Node::radius() / 2.0))
-                                    .dest(node.get_pos())
-                                    .color(Color::RED),
-                );
+                self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::RED);
             }
         });
         canvas.draw(self.graphics.bounds(), DrawParam::new());
