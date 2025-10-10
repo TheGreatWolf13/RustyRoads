@@ -1,11 +1,11 @@
 use crate::float::F32;
 use crate::node::fibonacci_heap::{Error, FibonacciHeap, Handle};
+use rustc_hash::FxHashMap;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 pub struct AStarHeap<T: Eq> {
-    map: HashMap<T, Handle<AStarNode<T>>>,
+    map: FxHashMap<T, Handle<AStarNode<T>>>,
     heap: FibonacciHeap<AStarNode<T>>,
 }
 
@@ -13,7 +13,7 @@ impl<T: Copy + Eq + Hash> AStarHeap<T> {
     pub fn new() -> AStarHeap<T> {
         AStarHeap {
             heap: FibonacciHeap::new(),
-            map: HashMap::new(),
+            map: FxHashMap::default(),
         }
     }
 

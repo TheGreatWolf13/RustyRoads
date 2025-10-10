@@ -2,7 +2,7 @@ use crate::math::Sqr;
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
@@ -27,10 +27,6 @@ impl From<IVec2> for ChunkPos {
 }
 
 impl ChunkPos {
-    const fn new(x: i32, y: i32) -> Self {
-        Self(IVec2::new(x, y))
-    }
-
     fn from_world_pos(world_pos: Vec2) -> Self {
         let pos = (world_pos / CHUNK_SIZE).floor();
         pos.as_ivec2().clamp(MIN_POS, MAX_POS).into()
@@ -203,8 +199,7 @@ impl FromRawId for NodeId {
 pub struct NodeManager {
     nodes: Inner<NodeId, Node>,
     edges: Inner<EdgeId, Edge>,
-    node_lookup: HashMap<ChunkPos, Vec<NodeId>>,
-    //todo rustc-hash
+    node_lookup: FxHashMap<ChunkPos, Vec<NodeId>>,
     pub start_node: Option<NodeId>,
     pub end_node: Option<NodeId>,
     pub selected_node: Option<NodeId>,
@@ -216,7 +211,7 @@ trait FromRawId {
 
 struct Inner<I: FromRawId, N> {
     id_maker: u64,
-    map: HashMap<I, N>,
+    map: FxHashMap<I, N>,
 }
 
 impl<I: FromRawId, N> Inner<I, N> {
@@ -230,14 +225,14 @@ impl NodeManager {
     pub fn new() -> Self {
         let mut manager = NodeManager {
             nodes: Inner {
-                map: HashMap::new(),
+                map: FxHashMap::default(),
                 id_maker: 0,
             },
             edges: Inner {
-                map: HashMap::new(),
+                map: FxHashMap::default(),
                 id_maker: 0,
             },
-            node_lookup: HashMap::new(),
+            node_lookup: FxHashMap::default(),
             start_node: None,
             end_node: None,
             selected_node: None,
@@ -331,8 +326,8 @@ impl NodeManager {
         let mut explored_paths = vec![];
         let goal_pos = self.get_node_pos(goal).unwrap();
         open_set.push(start, h(self.get_node_pos(start).unwrap(), goal_pos));
-        let mut came_from = HashMap::<NodeId, NodeId>::new();
-        let mut g_score = HashMap::new();
+        let mut came_from = FxHashMap::<NodeId, NodeId>::default();
+        let mut g_score = FxHashMap::default();
         g_score.insert(start, 0.0);
         let mut neighbours = vec![];
         while let Some(current) = open_set.pop() {
@@ -354,7 +349,7 @@ impl NodeManager {
         (None, explored_paths)
     }
 
-    fn reconstruct_path(&self, came_from: HashMap<NodeId, NodeId>, goal: NodeId) -> Vec<EdgeId> {
+    fn reconstruct_path(&self, came_from: FxHashMap<NodeId, NodeId>, goal: NodeId) -> Vec<EdgeId> {
         let mut vec = vec![];
         let mut last_node = goal;
         while let Some(next_node) = came_from.get(&last_node) {

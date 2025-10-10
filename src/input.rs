@@ -7,7 +7,7 @@ use ggez::input::keyboard::KeyCode;
 use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW};
 use ggez::input::mouse::MouseButton;
 use ggez::winit::keyboard::PhysicalKey;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 pub struct KeyBinding {
     click_count: u16,
@@ -63,11 +63,11 @@ pub enum BindingType {
     Left,
     PlaceNode,
     Pathfind,
-    SelectNode
+    SelectNode,
 }
 
 pub struct Input {
-    bindings_by_key: HashMap<PhysicalBinding, Vec<BindingType>>,
+    bindings_by_key: FxHashMap<PhysicalBinding, Vec<BindingType>>,
     bindings: EnumMap<BindingType, KeyBinding>,
     pub scroll: Vec2,
     mouse_pos: Vec2,
@@ -86,9 +86,9 @@ impl Input {
             }
         }
         while self.get_mut(SelectNode).consume_click() {
-           if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
-               node_manager.selected_node = Some(id);
-           }
+            if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
+                node_manager.selected_node = Some(id);
+            }
         }
     }
 
@@ -102,7 +102,7 @@ impl Input {
 
     pub fn new() -> Self {
         let mut input = Input {
-            bindings_by_key: HashMap::new(),
+            bindings_by_key: FxHashMap::default(),
             bindings: EnumMap::from_fn(|_| KeyBinding::new()),
             scroll: Vec2::ZERO,
             mouse_pos: Vec2::ZERO,

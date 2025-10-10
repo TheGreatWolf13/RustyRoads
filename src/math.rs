@@ -1,8 +1,7 @@
-use std::ops::Mul;
 use crate::float::{F32, F64};
+use std::ops::Mul;
 
 pub trait Sqr: Copy + Mul<Self> {
-
     #[inline(always)]
     fn sqr(self) -> <Self as Mul<Self>>::Output {
         self * self
