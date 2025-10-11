@@ -269,8 +269,6 @@ impl NodeManager {
                 last_node = Some(node);
             }
         }
-        manager.start_node = Some(ids[0][0]);
-        manager.end_node = Some(ids[(LEN - 1) / 2][LEN - 1]);
         manager
     }
 

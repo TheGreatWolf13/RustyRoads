@@ -1,10 +1,10 @@
 use crate::camera::Camera;
-use crate::input::BindingType::{Backward, Forward, Left, Pathfind, PlaceNode, Right, RotateLeft, RotateRight, SelectNode};
+use crate::input::BindingType::{Backward, Forward, Left, Pathfind, PlaceNode, Right, RotateLeft, RotateRight, SelectNode, SetEnd, SetStart};
 use crate::node::{EdgeId, NodeManager};
 use enum_map::{Enum, EnumMap};
 use ggez::glam::{Vec2, Vec4};
 use ggez::input::keyboard::KeyCode;
-use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW};
+use ggez::input::keyboard::KeyCode::{KeyA, KeyD, KeyE, KeyQ, KeyS, KeyW, KeyX, KeyZ};
 use ggez::input::mouse::MouseButton;
 use ggez::winit::keyboard::PhysicalKey;
 use rustc_hash::FxHashMap;
@@ -64,6 +64,8 @@ pub enum BindingType {
     PlaceNode,
     Pathfind,
     SelectNode,
+    SetStart,
+    SetEnd,
 }
 
 pub struct Input {
@@ -88,6 +90,16 @@ impl Input {
         while self.get_mut(SelectNode).consume_click() {
             if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
                 node_manager.selected_node = Some(id);
+            }
+        }
+        while self.get_mut(SetStart).consume_click() {
+            if let Some(selected) = node_manager.selected_node {
+                node_manager.start_node = Some(selected);
+            }
+        }
+        while self.get_mut(SetEnd).consume_click() {
+            if let Some(selected) = node_manager.selected_node {
+                node_manager.end_node = Some(selected);
             }
         }
     }
@@ -116,6 +128,8 @@ impl Input {
         input.bind(mouse(MouseButton::Left), PlaceNode);
         input.bind(keyboard(KeyCode::Enter), Pathfind);
         input.bind(mouse(MouseButton::Right), SelectNode);
+        input.bind(keyboard(KeyZ), SetStart);
+        input.bind(keyboard(KeyX), SetEnd);
         input
     }
 
