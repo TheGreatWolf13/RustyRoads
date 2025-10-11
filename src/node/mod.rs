@@ -1,8 +1,9 @@
-use crate::math::Sqr;
+use crate::math::{if_else, Sqr};
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
 use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
@@ -203,6 +204,7 @@ pub struct NodeManager {
     pub start_node: Option<NodeId>,
     pub end_node: Option<NodeId>,
     pub selected_node: Option<NodeId>,
+    pub tested_nodes: RefCell<Vec<NodeId>>,
 }
 
 trait FromRawId {
@@ -236,6 +238,7 @@ impl NodeManager {
             start_node: None,
             end_node: None,
             selected_node: None,
+            tested_nodes: RefCell::new(vec![]),
         };
         const RADIUS: i32 = 5;
         const LEN: usize = 2 * RADIUS as usize + 1;
@@ -254,7 +257,7 @@ impl NodeManager {
             let mut last_node = None;
             for node in ids {
                 if let Some(last) = last_node {
-                    manager.make_edge(last, node, if x == 0 { 2.0 } else { 1.0 });
+                    manager.make_edge(last, node, if_else!(x == 0 => 2.0 ; 1.0));
                 }
                 last_node = Some(node);
             }
@@ -358,9 +361,11 @@ impl NodeManager {
     }
 
     pub fn try_node_collision(&self, pos: Vec2) -> Option<NodeId> {
+        self.tested_nodes.borrow_mut().clear();
         for chunk_pos in ChunkPos::get_area(pos).into_iter() {
             if let Some(vec) = self.node_lookup.get(&chunk_pos) {
                 for id in vec {
+                    self.tested_nodes.borrow_mut().push(*id);
                     if self.get_node_pos(*id).unwrap().distance_squared(pos) <= Node::radius().sqr() {
                         return Some(*id);
                     }

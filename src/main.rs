@@ -114,6 +114,9 @@ impl EventHandler for Game {
             else if let Some(selected) = self.node_manager.selected_node && selected == node.get_id() {
                 self.draw_node(&mut canvas, node, Node::radius(), Color::YELLOW);
             } //
+            else if self.node_manager.tested_nodes.borrow().contains(&node.get_id()) {
+                self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::MAGENTA);
+            } //
             else {
                 self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::RED);
             }
