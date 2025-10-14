@@ -381,8 +381,7 @@ impl NodeManager {
         for chunk_pos in ChunkPos::get_area(pos).into_iter() {
             if let Some(vec) = self.edge_lookup.get(&chunk_pos) {
                 for id in vec {
-                    //Distance equation
-                    if self.get_edge(*id).distance_to_sqr(&self, pos) <= Node::radius().sqr() {
+                    if self.get_edge(*id).unwrap().distance_to_sqr(&self, pos) <= Node::radius().sqr() {
                         return Some(*id);
                     }
                 }
@@ -422,7 +421,7 @@ impl Edge {
         let ab = b - a;
         let ap = pos - a;
         let t = ap.dot(ab) / ab.length_squared();
-        let c = if 0.0 <=t && t <= 1.0 {
+        let c = if 0.0 <= t && t <= 1.0 {
             a + t * ab
         } //
         else if t < 0.0 {
