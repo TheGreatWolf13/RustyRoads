@@ -201,6 +201,7 @@ pub struct NodeManager {
     nodes: Inner<NodeId, Node>,
     edges: Inner<EdgeId, Edge>,
     node_lookup: FxHashMap<ChunkPos, Vec<NodeId>>,
+    edge_lookup: FxHashMap<ChunkPos, Vec<EdgeId>>,
     pub start_node: Option<NodeId>,
     pub end_node: Option<NodeId>,
     pub selected_node: Option<NodeId>,
@@ -235,6 +236,7 @@ impl NodeManager {
                 id_maker: 0,
             },
             node_lookup: FxHashMap::default(),
+            edge_lookup: FxHashMap::default(),
             start_node: None,
             end_node: None,
             selected_node: None,
@@ -374,6 +376,20 @@ impl NodeManager {
         }
         None
     }
+
+    pub fn try_edge_collision(&self, pos: Vec2) -> Option<EdgeId> {
+        for chunk_pos in ChunkPos::get_area(pos).into_iter() {
+            if let Some(vec) = self.edge_lookup.get(&chunk_pos) {
+                for id in vec {
+                    //Distance equation
+                    if self.get_edge(*id).distance_to_sqr(&self, pos) <= Node::radius().sqr() {
+                        return Some(*id);
+                    }
+                }
+            }
+        }
+        None
+    }
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash)]
@@ -398,6 +414,24 @@ impl Edge {
 
     pub fn get_nodes(&self) -> (NodeId, NodeId) {
         self.nodes
+    }
+
+    pub fn distance_to_sqr(&self, node_manager: &NodeManager, pos: Vec2) -> f32 {
+        let a = node_manager.get_node_pos(self.nodes.0).unwrap();
+        let b = node_manager.get_node_pos(self.nodes.1).unwrap();
+        let ab = b - a;
+        let ap = pos - a;
+        let t = ap.dot(ab) / ab.length_squared();
+        let c = if 0.0 <=t && t <= 1.0 {
+            a + t * ab
+        } //
+        else if t < 0.0 {
+            a
+        } //
+        else {
+            b
+        };
+        c.distance_squared(pos)
     }
 
     pub fn get_other_node(&self, node: NodeId) -> NodeId {
