@@ -36,6 +36,13 @@ struct Game {
 trait Lerp {
     type Output;
 
+    #[inline(always)]
+    fn get_alpha(time: &TimeContext) -> f32 {
+        let remainder = time.remaining_update_time().as_secs_f32();
+        let alpha = remainder / TPS as f32;
+        alpha
+    }
+
     fn lerp(self, time: &TimeContext) -> Self::Output;
 }
 
@@ -43,9 +50,7 @@ impl Lerp for (f32, f32) {
     type Output = f32;
 
     fn lerp(self, time: &TimeContext) -> Self::Output {
-        let remainder = time.remaining_update_time().as_secs_f32();
-        let alpha = remainder / TPS as f32;
-        self.0 + (self.1 - self.0) * alpha
+        self.0 + (self.1 - self.0) * Self::get_alpha(time)
     }
 }
 
