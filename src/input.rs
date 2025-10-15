@@ -26,6 +26,14 @@ impl KeyBinding {
         self.is_down
     }
 
+    pub fn consume_all_clicks(&mut self) -> bool {
+        if self.click_count > 0 {
+            self.click_count = 0;
+            return true;
+        }
+        false
+    }
+
     pub fn consume_click(&mut self) -> bool {
         if self.click_count > 0 {
             self.click_count -= 1;
@@ -80,24 +88,24 @@ impl Input {
         while self.get_mut(PlaceNode).consume_click() {
             node_manager.add_node(self.get_world_pos_from_screen_pos(window_size, &camera));
         }
-        while self.get_mut(Pathfind).consume_click() {
+        if self.get_mut(Pathfind).consume_all_clicks() {
             if let Some(start) = node_manager.start_node && let Some(end) = node_manager.end_node {
                 let (path, explored) = node_manager.a_star(start, end, |a, b| a.distance(b) / 2.0);
                 *current_path = path;
                 *explored_paths = explored;
             }
         }
-        while self.get_mut(SelectNode).consume_click() {
+        if self.get_mut(SelectNode).consume_all_clicks() {
             if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
                 node_manager.selected_node = Some(id);
             }
         }
-        while self.get_mut(SetStart).consume_click() {
+        if self.get_mut(SetStart).consume_all_clicks() {
             if let Some(selected) = node_manager.selected_node {
                 node_manager.start_node = Some(selected);
             }
         }
-        while self.get_mut(SetEnd).consume_click() {
+        if self.get_mut(SetEnd).consume_all_clicks() {
             if let Some(selected) = node_manager.selected_node {
                 node_manager.end_node = Some(selected);
             }
