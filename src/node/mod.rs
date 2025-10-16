@@ -350,6 +350,13 @@ impl NodeManager {
         let node_b = self.get_node_mut(node_b).unwrap();
         node_b.edges.push(id);
         //Add edge to lookup
+        let a = node_a.pos;
+        let b = node_b.pos;
+        let ab = b - a;
+        let (ab, len) = ab.normalize_and_length();
+        let local_pos: LocalPos = a.into();
+        let delta = local_pos.get_delta(ab);
+        let t = delta / ab;
         id
     }
 
