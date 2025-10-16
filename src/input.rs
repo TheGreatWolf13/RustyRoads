@@ -1,5 +1,5 @@
 use crate::camera::Camera;
-use crate::input::BindingType::{Backward, Forward, Left, Pathfind, PlaceNode, Right, RotateLeft, RotateRight, SelectNode, SetEnd, SetStart};
+use crate::input::BindingType::{Backward, Forward, Left, Pathfind, PlaceNode, Right, RotateLeft, RotateRight, SelectEdge, SelectNode, SetEnd, SetStart};
 use crate::node::{EdgeId, NodeManager};
 use enum_map::{Enum, EnumMap};
 use ggez::glam::{Vec2, Vec4};
@@ -72,6 +72,7 @@ pub enum BindingType {
     PlaceNode,
     Pathfind,
     SelectNode,
+    SelectEdge,
     SetStart,
     SetEnd,
 }
@@ -98,6 +99,11 @@ impl Input {
         if self.get_mut(SelectNode).consume_all_clicks() {
             if let Some(id) = node_manager.try_node_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
                 node_manager.selected_node = Some(id);
+            }
+        }
+        if self.get_mut(SelectEdge).consume_all_clicks() {
+            if let Some(id) = node_manager.try_edge_collision(self.get_world_pos_from_screen_pos(window_size, &camera)) {
+                node_manager.selected_edge = Some(id);
             }
         }
         if self.get_mut(SetStart).consume_all_clicks() {
@@ -136,6 +142,7 @@ impl Input {
         input.bind(mouse(MouseButton::Left), PlaceNode);
         input.bind(keyboard(KeyCode::Enter), Pathfind);
         input.bind(mouse(MouseButton::Right), SelectNode);
+        input.bind(mouse(MouseButton::Middle), SelectEdge);
         input.bind(keyboard(KeyZ), SetStart);
         input.bind(keyboard(KeyX), SetEnd);
         input

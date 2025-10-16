@@ -1,4 +1,4 @@
-use crate::math::{if_else, Sqr};
+use crate::math::{if_else, NormalizedVec2, Sqr};
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
@@ -24,6 +24,30 @@ struct ChunkPos(IVec2);
 impl From<IVec2> for ChunkPos {
     fn from(pos: IVec2) -> Self {
         ChunkPos(pos)
+    }
+}
+
+#[derive(Copy, Clone)]
+struct LocalPos(Vec2);
+
+impl From<Vec2> for LocalPos {
+    fn from(pos: Vec2) -> Self {
+        let mut pos = pos % CHUNK_SIZE;
+        pos.x = if_else!(pos.x < 0 => pos.x + CHUNK_SIZE ; pos.x);
+        pos.y = if_else!(pos.y < 0 => pos.y + CHUNK_SIZE ; pos.y);
+        LocalPos(pos)
+    }
+}
+
+impl LocalPos {
+    fn get_delta(mut self, direction: Vec2) -> Vec2 {
+        if direction.x.signum() != self.0.x.signum()  {
+            self.0.x = CHUNK_SIZE - self.0.x;
+        }
+        if direction.y.signum() != self.0.y.signum()  {
+            self.0.y = CHUNK_SIZE - self.0.y;
+        }
+        self.0
     }
 }
 
@@ -205,6 +229,7 @@ pub struct NodeManager {
     pub start_node: Option<NodeId>,
     pub end_node: Option<NodeId>,
     pub selected_node: Option<NodeId>,
+    pub selected_edge: Option<EdgeId>,
     pub tested_nodes: RefCell<Vec<NodeId>>,
 }
 
@@ -240,6 +265,7 @@ impl NodeManager {
             start_node: None,
             end_node: None,
             selected_node: None,
+            selected_edge: None,
             tested_nodes: RefCell::new(vec![]),
         };
         const RADIUS: i32 = 5;
@@ -319,8 +345,11 @@ impl NodeManager {
             id,
             speed,
         });
-        self.get_node_mut(node_a).unwrap().edges.push(id);
-        self.get_node_mut(node_b).unwrap().edges.push(id);
+        let node_a = self.get_node_mut(node_a).unwrap();
+        node_a.edges.push(id);
+        let node_b = self.get_node_mut(node_b).unwrap();
+        node_b.edges.push(id);
+        //Add edge to lookup
         id
     }
 

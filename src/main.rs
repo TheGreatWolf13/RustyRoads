@@ -88,7 +88,10 @@ impl EventHandler for Game {
             let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
             let main_dir = (b - a).normalize();
             let perp = main_dir.perp();
-            let color = if self.current_path.as_ref().is_some_and(|path| path.contains(&edge.get_id())) {
+            let color = if let Some(selected_edge) = self.node_manager.selected_edge && selected_edge == edge.get_id() {
+                Color::GREEN
+            } //
+            else if let Some(path) = &self.current_path && path.contains(&edge.get_id()) {
                 Color::YELLOW
             } //
             else if self.explored_paths.contains(&edge.get_id()) {
