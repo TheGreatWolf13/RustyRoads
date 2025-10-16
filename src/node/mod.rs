@@ -353,10 +353,19 @@ impl NodeManager {
         let a = node_a.pos;
         let b = node_b.pos;
         let ab = b - a;
-        let (ab, len) = ab.normalize_and_length();
-        let local_pos: LocalPos = a.into();
-        let delta = local_pos.get_delta(ab);
-        let t = delta / ab;
+        let (ab, mut len) = ab.normalize_and_length();
+        let mut p = a;
+        while len > 0.0 {
+            let local_pos: LocalPos = p.into();
+            let delta = local_pos.get_delta(ab);
+            let t = delta / ab;
+            if t.x < t.y {
+
+            } //
+            else {
+
+            }
+        }
         id
     }
 
