@@ -3,6 +3,8 @@ use macro_pub::macro_pub;
 use std::ops::Mul;
 use ggez::glam::Vec2;
 
+pub(crate) mod vec;
+
 pub trait Sqr: Copy + Mul<Self> {
     #[inline(always)]
     fn sqr(self) -> <Self as Mul<Self>>::Output {

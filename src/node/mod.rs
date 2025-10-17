@@ -1,4 +1,4 @@
-use crate::math::{if_else, NormalizedVec2, Sqr};
+use crate::math::{if_else, NormalizedVec2, Sqr, vec::Vec2Axis};
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
@@ -8,6 +8,7 @@ use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::num::NonZeroU64;
+use crate::math::vec::Vec2CompWise;
 
 mod a_star;
 mod fibonacci_heap;
@@ -347,23 +348,64 @@ impl NodeManager {
         });
         let node_a = self.get_node_mut(node_a).unwrap();
         node_a.edges.push(id);
+        let a = node_a.pos;
         let node_b = self.get_node_mut(node_b).unwrap();
         node_b.edges.push(id);
-        //Add edge to lookup
-        let a = node_a.pos;
         let b = node_b.pos;
-        let ab = b - a;
-        let (ab, mut len) = ab.normalize_and_length();
-        let mut p = a;
-        while len > 0.0 {
-            let local_pos: LocalPos = p.into();
-            let delta = local_pos.get_delta(ab);
-            let t = delta / ab;
-            if t.x < t.y {
-
+        //Add edge to lookup
+        let chunk_a = ChunkPos::from_world_pos(a);
+        let chunk_b = ChunkPos::from_world_pos(b);
+        if chunk_a == chunk_b {
+            //Too small
+            self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
+        } //
+        else if chunk_a.0.x == chunk_b.0.x || chunk_a.0.y == chunk_b.0.y {
+            //Straight line
+            let spam = chunk_b.0 - chunk_a.0;
+            let axis = spam.abs().get_max_axis().unwrap();
+            let steps = spam.abs().get_comp(axis) + 1;
+            self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
+            self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+            if steps > 2 {
+                let mut chunk = chunk_a.0;
+                let offset = spam.signum().get_comp(axis);
+                for _ in 1..steps - 1 {
+                    self.edge_lookup.entry(chunk.with_offset_on(axis, offset).into()).or_insert(Vec::new()).push(id);
+                }
+            }
+        } //
+        else {
+            let ab = b - a;
+            let spam = chunk_b.0 - chunk_a.0;
+            if let Some(axis) = ab.get_max_axis() {
+                let steps = spam.abs().get_comp(axis) + 1;
+                self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+                if steps > 2 {
+                    let mut chunk = chunk_a.0;
+                    let offset = spam.signum().get_comp(axis);
+                    for _ in 1..steps-1 {
+                        chunk = chunk.with_offset_on(axis, offset);
+                        let main_comp = chunk.get_comp(axis) as f32 * CHUNK_SIZE + CHUNK_SIZE / 2.0;
+                        let other_comp = (b.get_comp(axis.other()) - a.get_comp(axis.other())) / (b.get_comp(axis) - a.get_comp(axis)) * (main_comp - a.get_comp(axis)) + a.get_comp(axis.other());
+                        let other_comp = (other_comp / CHUNK_SIZE).floor() as i32;
+                        self.edge_lookup.entry(chunk.with_comp(axis.other(), other_comp).into()).or_insert(Vec::new()).push(id);
+                    }
+                }
             } //
             else {
-
+                //Perfectly diagonal vector
+                let steps = spam.abs().get_comp(Vec2Axis::X) + 1;
+                self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+                if steps > 2 {
+                    let mut chunk = chunk_a.0;
+                    let offset = spam.signum().get_comp(Vec2Axis::X);
+                    for _ in 1..steps-1 {
+                        chunk = chunk.with_offset_on(Vec2Axis::X, offset).with_offset_on(Vec2Axis::Y, offset);
+                        self.edge_lookup.entry(chunk.into()).or_insert(Vec::new()).push(id);
+                    }
+                }
             }
         }
         id
