@@ -5,6 +5,7 @@ mod graphics;
 mod node;
 mod float;
 mod math;
+mod traffic;
 
 use crate::camera::Camera;
 use crate::graphics::Graphics;
