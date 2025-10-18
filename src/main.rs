@@ -19,6 +19,7 @@ use ggez::input::mouse::MouseButton;
 use ggez::timer::TimeContext;
 use ggez::*;
 use std::path::PathBuf;
+use std::{any, slice};
 use tuple_map::TupleMap2;
 
 const CITY_WIDTH: f32 = 100_000.0;
@@ -184,4 +185,14 @@ fn main() -> GameResult {
         .build()?;
     let game = Game::new(&ctx, ctx.gfx.drawable_size().into())?;
     event::run(ctx, event_loop, game)
+}
+
+#[allow(dead_code)]
+fn print_memory<T>(input: &T) {
+    unsafe {
+        println!("{} = {:?}", any::type_name::<T>(), slice::from_raw_parts(
+            input as *const _ as *const u8,
+            size_of::<T>(),
+        ));
+    }
 }
