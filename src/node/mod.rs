@@ -1,4 +1,5 @@
-use crate::math::{if_else, NormalizedVec2, Sqr, vec::Vec2Axis};
+use crate::math::vec::Vec2CompWise;
+use crate::math::{if_else, vec::Vec2Axis, Sqr};
 use crate::node::a_star::AStarHeap;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
@@ -8,7 +9,6 @@ use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::num::NonZeroU64;
-use crate::math::vec::Vec2CompWise;
 
 mod a_star;
 mod fibonacci_heap;
@@ -34,18 +34,18 @@ struct LocalPos(Vec2);
 impl From<Vec2> for LocalPos {
     fn from(pos: Vec2) -> Self {
         let mut pos = pos % CHUNK_SIZE;
-        pos.x = if_else!(pos.x < 0 => pos.x + CHUNK_SIZE ; pos.x);
-        pos.y = if_else!(pos.y < 0 => pos.y + CHUNK_SIZE ; pos.y);
+        pos.x = if_else!(pos.x < 0.0 => pos.x + CHUNK_SIZE ; pos.x);
+        pos.y = if_else!(pos.y < 0.0 => pos.y + CHUNK_SIZE ; pos.y);
         LocalPos(pos)
     }
 }
 
 impl LocalPos {
     fn get_delta(mut self, direction: Vec2) -> Vec2 {
-        if direction.x.signum() != self.0.x.signum()  {
+        if direction.x.signum() != self.0.x.signum() {
             self.0.x = CHUNK_SIZE - self.0.x;
         }
-        if direction.y.signum() != self.0.y.signum()  {
+        if direction.y.signum() != self.0.y.signum() {
             self.0.y = CHUNK_SIZE - self.0.y;
         }
         self.0
@@ -335,7 +335,7 @@ impl NodeManager {
             pos,
             edges: vec![],
         });
-        self.node_lookup.entry(ChunkPos::from_world_pos(pos)).or_insert(Vec::new()).push(id);
+        self.node_lookup.entry(ChunkPos::from_world_pos(pos)).or_insert_with(|| Vec::new()).push(id);
         id
     }
 
@@ -357,20 +357,20 @@ impl NodeManager {
         let chunk_b = ChunkPos::from_world_pos(b);
         if chunk_a == chunk_b {
             //Too small
-            self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
+            self.edge_lookup.entry(chunk_a).or_insert_with(|| Vec::new()).push(id);
         } //
         else if chunk_a.0.x == chunk_b.0.x || chunk_a.0.y == chunk_b.0.y {
             //Straight line
             let spam = chunk_b.0 - chunk_a.0;
             let axis = spam.abs().get_max_axis().unwrap();
             let steps = spam.abs().get_comp(axis) + 1;
-            self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
-            self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+            self.edge_lookup.entry(chunk_a).or_insert_with(|| Vec::new()).push(id);
+            self.edge_lookup.entry(chunk_b).or_insert_with(|| Vec::new()).push(id);
             if steps > 2 {
-                let mut chunk = chunk_a.0;
+                let chunk = chunk_a.0;
                 let offset = spam.signum().get_comp(axis);
-                for _ in 1..steps - 1 {
-                    self.edge_lookup.entry(chunk.with_offset_on(axis, offset).into()).or_insert(Vec::new()).push(id);
+                for step in 1..steps - 1 {
+                    self.edge_lookup.entry(chunk.with_offset_on(axis, step * offset).into()).or_insert_with(|| Vec::new()).push(id);
                 }
             }
         } //
@@ -379,31 +379,31 @@ impl NodeManager {
             let spam = chunk_b.0 - chunk_a.0;
             if let Some(axis) = ab.get_max_axis() {
                 let steps = spam.abs().get_comp(axis) + 1;
-                self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
-                self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_a).or_insert_with(|| Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_b).or_insert_with(|| Vec::new()).push(id);
                 if steps > 2 {
                     let mut chunk = chunk_a.0;
                     let offset = spam.signum().get_comp(axis);
-                    for _ in 1..steps-1 {
+                    for _ in 1..steps - 1 {
                         chunk = chunk.with_offset_on(axis, offset);
                         let main_comp = chunk.get_comp(axis) as f32 * CHUNK_SIZE + CHUNK_SIZE / 2.0;
                         let other_comp = (b.get_comp(axis.other()) - a.get_comp(axis.other())) / (b.get_comp(axis) - a.get_comp(axis)) * (main_comp - a.get_comp(axis)) + a.get_comp(axis.other());
                         let other_comp = (other_comp / CHUNK_SIZE).floor() as i32;
-                        self.edge_lookup.entry(chunk.with_comp(axis.other(), other_comp).into()).or_insert(Vec::new()).push(id);
+                        self.edge_lookup.entry(chunk.with_comp(axis.other(), other_comp).into()).or_insert_with(|| Vec::new()).push(id);
                     }
                 }
             } //
             else {
                 //Perfectly diagonal vector
                 let steps = spam.abs().get_comp(Vec2Axis::X) + 1;
-                self.edge_lookup.entry(chunk_a).or_insert(Vec::new()).push(id);
-                self.edge_lookup.entry(chunk_b).or_insert(Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_a).or_insert_with(|| Vec::new()).push(id);
+                self.edge_lookup.entry(chunk_b).or_insert_with(|| Vec::new()).push(id);
                 if steps > 2 {
                     let mut chunk = chunk_a.0;
                     let offset = spam.signum().get_comp(Vec2Axis::X);
-                    for _ in 1..steps-1 {
+                    for _ in 1..steps - 1 {
                         chunk = chunk.with_offset_on(Vec2Axis::X, offset).with_offset_on(Vec2Axis::Y, offset);
-                        self.edge_lookup.entry(chunk.into()).or_insert(Vec::new()).push(id);
+                        self.edge_lookup.entry(chunk.into()).or_insert_with(|| Vec::new()).push(id);
                     }
                 }
             }
@@ -468,7 +468,7 @@ impl NodeManager {
         for chunk_pos in ChunkPos::get_area(pos).into_iter() {
             if let Some(vec) = self.edge_lookup.get(&chunk_pos) {
                 for id in vec {
-                    if self.get_edge(*id).unwrap().distance_to_sqr(&self, pos) <= Node::radius().sqr() {
+                    if self.get_edge(*id).unwrap().distance_to_sqr(&self, pos) <= (Node::radius() / 2.0).sqr() {
                         return Some(*id);
                     }
                 }

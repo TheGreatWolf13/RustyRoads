@@ -18,7 +18,6 @@ impl Vec2Axis {
 pub trait Vec2CompWise {
     type Primitive;
 
-    #[inline]
     fn get_comp(&self, comp: Vec2Axis) -> Self::Primitive;
 
     fn get_max_axis(&self) -> Option<Vec2Axis>;
@@ -29,10 +28,11 @@ pub trait Vec2CompWise {
 }
 
 macro_rules! impl_vec2comp {
-    ($name:ty, $prim:ty, $x:expr, $y:expr, $new:expr) => {
+    ($name:ty, $prim:ty, $x:ident, $y:ident, $new:expr) => {
         impl Vec2CompWise for $name {
             type Primitive = $prim;
 
+            #[inline]
             fn get_comp(&self, comp: Vec2Axis) -> Self::Primitive {
                 match comp {
                     Vec2Axis::X => self.$x,

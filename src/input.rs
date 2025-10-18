@@ -157,7 +157,7 @@ impl Input {
     }
 
     fn bind(&mut self, bind: PhysicalBinding, binding: BindingType) {
-        self.bindings_by_key.entry(bind).or_insert(Vec::new()).push(binding);
+        self.bindings_by_key.entry(bind).or_insert_with(|| Vec::new()).push(binding);
     }
 
     pub fn handle_down(&mut self, binding: PhysicalBinding) {

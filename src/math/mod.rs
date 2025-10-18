@@ -1,9 +1,8 @@
 use crate::float::{F32, F64};
 use macro_pub::macro_pub;
 use std::ops::Mul;
-use ggez::glam::Vec2;
 
-pub(crate) mod vec;
+pub mod vec;
 
 pub trait Sqr: Copy + Mul<Self> {
     #[inline(always)]
@@ -32,13 +31,4 @@ macro_rules! if_else {
             $false_value
         }
     };
-}
-
-#[derive(Copy, Clone, PartialEq)]
-pub struct NormalizedVec2(Vec2);
-
-impl From<Vec2> for NormalizedVec2 {
-    fn from(vec: Vec2) -> Self {
-        Self(vec.normalize())
-    }
 }
