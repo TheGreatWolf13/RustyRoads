@@ -191,7 +191,7 @@ fn main() -> GameResult {
 #[allow(dead_code)]
 fn print_memory<T>(input: &T) {
     unsafe {
-        println!("{} = {:?}", any::type_name::<T>(), slice::from_raw_parts(
+        println!("{} has size {} = {:?}", any::type_name::<T>(), size_of::<T>(), slice::from_raw_parts(
             input as *const _ as *const u8,
             size_of::<T>(),
         ));
