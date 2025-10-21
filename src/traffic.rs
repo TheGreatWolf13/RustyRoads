@@ -1,4 +1,5 @@
 use rustc_hash::FxHashMap;
+use seq_macro::seq;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use LaneType::{BikeLane, BusForward, BusReverse, DirtForward, DirtReverse, Empty, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
@@ -63,31 +64,33 @@ pub struct LaneDefinition {
     lanes: LaneStorage,
 }
 
-macro_rules! lane_storage {
-    ($name:ident $prefix:ident [$($N:literal)+]) => {
-        paste::item!{
-            enum $name {
-                $([<$prefix $N>]([LaneType; $N])),+,
+seq!(N in 1..=40 {
+    enum LaneStorage {
+        #(
+          W~N([LaneType; N]),
+        )*
+    }
+
+    impl LaneDefinition {
+        pub fn new(size: u8) -> Self {
+            let lanes = match size {
+                0 => panic!("Size cannot be zero!"),
+                #(
+                  N => LaneStorage::W~N([Empty; N]),
+                )*
+                _ => panic!("Exceeded max size!"),
+            };
+            Self {
+                lanes
             }
         }
 
-        paste::item! {
-            impl LaneDefinition {
-                pub fn size(&self) -> u8 {
-                    match self.lanes {
-                        $(LaneStorage::[<$prefix $N>](_) => $N),+,
-                    }
-                }
+        pub fn size(&self) -> u8 {
+            match self.lanes {
+                #(
+                  LaneStorage::W~N(_) => N,
+                )*
             }
         }
     }
-}
-
-lane_storage! {
-    LaneStorage W [
-         1  2  3  4  5  6  7  8  9 10
-        11 12 13 14 15 16 17 18 19 20
-        21 22 23 24 25 26 27 28 29 30
-        31 32 33 34 35 36 37 38 39 40
-    ]
-}
+});
