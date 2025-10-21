@@ -1,14 +1,15 @@
+use crate::math::if_else;
 use rustc_hash::FxHashMap;
 use seq_macro::seq;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use LaneCrossing::{DoubleContinuous, SingleContinuous, SingleDashed};
+use LaneDirection::{Forward, Reverse};
+use LaneFlow::{Convergent, Divergent};
+use LaneSeparator::{BorderStrip, Curb, Nothing, ParkingStrip, SeparationStrip};
 use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
 use LaneWidth::Full;
 use LaneWidth::Half;
-use LaneDirection::{Forward, Reverse};
-use LaneCrossing::{DoubleContinuous, DoubleDashed, SingleContinuous, SingleDashed};
-use LaneFlow::{Convergent, Divergent};
-use LaneSeparator::{BorderStrip, Curb, Nothing, ParkingStrip, SeparationStrip};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, EnumIter)]
 #[repr(u8)]
