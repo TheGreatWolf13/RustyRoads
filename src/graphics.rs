@@ -1,8 +1,10 @@
 use crate::CITY_WIDTH;
 use ggez::glam::Vec2;
-use ggez::graphics::{Color, Mesh, MeshBuilder, MeshData, Vertex};
+use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, MeshBuilder, MeshData, Vertex};
 use ggez::{Context, GameResult};
 use std::f32::consts::PI;
+use crate::node::{Edge, EdgeId, NodeManager};
+use tuple_map::TupleMap2;
 
 pub struct Graphics {
     circle: Mesh,
@@ -60,6 +62,37 @@ impl Graphics {
 
     pub fn bounds(&self) -> &Mesh {
         &self.bounds
+    }
+
+    pub fn draw_ege(&self, canvas: &mut Canvas, ctx: &mut Context, edge: &Edge, node_manager: &NodeManager, current_path: &Option<Vec<EdgeId>>, explored_paths: &Vec<EdgeId>) -> GameResult {
+        const LENGTH: f32 = 10.0;
+        let (a, b) = edge.get_nodes().map(|id| node_manager.get_node_pos(id).unwrap());
+        let main_dir = (b - a).normalize();
+        let perp = main_dir.perp();
+        let color = if let Some(selected_edge) = node_manager.selected_edge && selected_edge == edge.get_id() {
+            Color::GREEN
+        } //
+        else if let Some(path) = &current_path && path.contains(&edge.get_id()) {
+            Color::YELLOW
+        } //
+        else if explored_paths.contains(&edge.get_id()) {
+            Color::WHITE
+        } //
+        else {
+            Color::from_rgb(127, 127, 127)
+        };
+        canvas.draw(&Mesh::new_polygon(
+            ctx,
+            DrawMode::fill(),
+            &[
+                a + 0.5 * LENGTH * perp,
+                a - 0.5 * LENGTH * perp,
+                b - 0.5 * LENGTH * perp,
+                b + 0.5 * LENGTH * perp,
+            ],
+            color,
+        )?, DrawParam::new().color(Color::WHITE));
+        Ok(())
     }
 }
 

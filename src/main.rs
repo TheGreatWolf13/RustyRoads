@@ -10,11 +10,11 @@ mod traffic;
 use crate::camera::Camera;
 use crate::graphics::Graphics;
 use crate::input::Input;
-use crate::node::{EdgeId, Node, NodeManager};
+use crate::node::{Edge, EdgeId, Node, NodeManager};
 use ggez::conf::{NumSamples, WindowMode, WindowSetup};
 use ggez::event::EventHandler;
 use ggez::glam::Vec2;
-use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, Text};
+use ggez::graphics::{Canvas, Color, DrawParam, Text};
 use ggez::input::keyboard::KeyInput;
 use ggez::input::mouse::MouseButton;
 use ggez::timer::TimeContext;
@@ -68,7 +68,30 @@ impl Game {
         })
     }
 
-    fn draw_node(&self, canvas: &mut Canvas, node: &Node, radius: f32, colour: Color) {
+    fn draw_edge(&self, edge: &Edge, mut canvas: &mut Canvas, mut ctx: &mut Context) -> GameResult {
+        self.graphics.draw_ege(&mut canvas, &mut ctx, &edge, &self.node_manager, &self.current_path, &self.explored_paths)?;
+        Ok(())
+    }
+
+    fn draw_node(&self, node: &Node, mut canvas: &mut Canvas) {
+        if let Some(start) = self.node_manager.start_node && start == node.get_id() {
+            self.draw_node_internal(node, &mut canvas, Node::radius(), Color::GREEN);
+        } //
+        else if let Some(end) = self.node_manager.end_node && end == node.get_id() {
+            self.draw_node_internal(node, &mut canvas, Node::radius(), Color::BLUE);
+        } //
+        else if let Some(selected) = self.node_manager.selected_node && selected == node.get_id() {
+            self.draw_node_internal(node, &mut canvas, Node::radius(), Color::YELLOW);
+        } //
+        else if self.node_manager.tested_nodes.borrow().contains(&node.get_id()) {
+            self.draw_node_internal(node, &mut canvas, Node::radius() / 2.0, Color::MAGENTA);
+        } //
+        else {
+            self.draw_node_internal(node, &mut canvas, Node::radius() / 2.0, Color::RED);
+        }
+    }
+
+    fn draw_node_internal(&self, node: &Node, canvas: &mut Canvas,  radius: f32, colour: Color) {
         canvas.draw(self.graphics.circle(), DrawParam::new().scale(Vec2::splat(radius)).dest(node.get_pos()).color(colour));
     }
 }
@@ -86,50 +109,10 @@ impl EventHandler for Game {
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
         canvas.set_projection(self.camera.get_proj_matrix() * self.camera.get_view_matrix());
         for edge in self.node_manager.get_edges() {
-            const LENGTH: f32 = 10.0;
-            let (a, b) = edge.get_nodes().map(|id| self.node_manager.get_node_pos(id).unwrap());
-            let main_dir = (b - a).normalize();
-            let perp = main_dir.perp();
-            let color = if let Some(selected_edge) = self.node_manager.selected_edge && selected_edge == edge.get_id() {
-                Color::GREEN
-            } //
-            else if let Some(path) = &self.current_path && path.contains(&edge.get_id()) {
-                Color::YELLOW
-            } //
-            else if self.explored_paths.contains(&edge.get_id()) {
-                Color::WHITE
-            } //
-            else {
-                Color::from_rgb(127, 127, 127)
-            };
-            canvas.draw(&Mesh::new_polygon(
-                ctx,
-                DrawMode::fill(),
-                &[
-                    a + 0.5 * LENGTH * perp,
-                    a - 0.5 * LENGTH * perp,
-                    b - 0.5 * LENGTH * perp,
-                    b + 0.5 * LENGTH * perp,
-                ],
-                color,
-            )?, DrawParam::new().color(Color::WHITE));
+            self.draw_edge(edge, &mut canvas, ctx)?;
         }
         for node in self.node_manager.get_nodes() {
-            if let Some(start) = self.node_manager.start_node && start == node.get_id() {
-                self.draw_node(&mut canvas, node, Node::radius(), Color::GREEN);
-            } //
-            else if let Some(end) = self.node_manager.end_node && end == node.get_id() {
-                self.draw_node(&mut canvas, node, Node::radius(), Color::BLUE);
-            } //
-            else if let Some(selected) = self.node_manager.selected_node && selected == node.get_id() {
-                self.draw_node(&mut canvas, node, Node::radius(), Color::YELLOW);
-            } //
-            else if self.node_manager.tested_nodes.borrow().contains(&node.get_id()) {
-                self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::MAGENTA);
-            } //
-            else {
-                self.draw_node(&mut canvas, node, Node::radius() / 2.0, Color::RED);
-            }
+            self.draw_node(node, &mut canvas);
         }
         canvas.draw(self.graphics.bounds(), DrawParam::new());
         canvas.finish(ctx)?;
