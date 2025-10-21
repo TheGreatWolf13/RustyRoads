@@ -6,7 +6,9 @@ use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Grass, NormalFo
 use LaneWidth::Full;
 use LaneWidth::Half;
 use LaneDirection::{Forward, Reverse};
-use crate::traffic::LaneSeparator::{BorderStrip, Curb, Nothing};
+use LaneCrossing::{DoubleContinuous, DoubleDashed, SingleContinuous, SingleDashed};
+use LaneFlow::{Convergent, Divergent};
+use LaneSeparator::{BorderStrip, Curb, Nothing, ParkingStrip, SeparationStrip};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, EnumIter)]
 #[repr(u8)]
@@ -57,20 +59,46 @@ impl LaneType {
             }
             NormalForward => match previous {
                 Grass | Sidewalk => BorderStrip(if_else!(first_lane => LaneBorder::Edge ; LaneBorder::Middle)),
-                NormalForward => {}
-                NormalReverse => {}
+                NormalForward => SeparationStrip(Convergent, SingleDashed),
+                NormalReverse => SeparationStrip(Divergent, DoubleContinuous),
                 DirtForward | DirtReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Nothing,
-                BusForward => {}
-                BusReverse => {}
+                BusForward => SeparationStrip(Convergent, DoubleContinuous),
+                BusReverse => SeparationStrip(Divergent, DoubleContinuous),
             }
-            NormalReverse => {}
+            NormalReverse => match previous {
+                Grass | Sidewalk => BorderStrip(if_else!(first_lane => LaneBorder::Edge ; LaneBorder::Middle)),
+                NormalForward => SeparationStrip(Divergent, DoubleContinuous),
+                NormalReverse => SeparationStrip(Convergent, SingleDashed),
+                DirtForward | DirtReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Nothing,
+                BusForward => SeparationStrip(Divergent, DoubleContinuous),
+                BusReverse => SeparationStrip(Convergent, DoubleContinuous),
+            }
             DirtForward | DirtReverse => Nothing,
-            BusForward => {}
-            BusReverse => {}
-            ParkingForward => {}
-            ParkingReverse => {}
-            ShoulderForward => {}
-            ShoulderReverse => {}
+            BusForward => match previous {
+                Grass | Sidewalk => BorderStrip(if_else!(first_lane => LaneBorder::Edge ; LaneBorder::Middle)),
+                NormalForward => SeparationStrip(Convergent, DoubleContinuous),
+                NormalReverse => SeparationStrip(Divergent, DoubleContinuous),
+                DirtForward | DirtReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Nothing,
+                BusForward => SeparationStrip(Convergent, SingleDashed),
+                BusReverse => SeparationStrip(Divergent, SingleDashed),
+            }
+            BusReverse => match previous {
+                Grass | Sidewalk => BorderStrip(if_else!(first_lane => LaneBorder::Edge ; LaneBorder::Middle)),
+                NormalForward => SeparationStrip(Divergent, DoubleContinuous),
+                NormalReverse => SeparationStrip(Convergent, DoubleContinuous),
+                DirtForward | DirtReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Nothing,
+                BusForward => SeparationStrip(Divergent, SingleDashed),
+                BusReverse => SeparationStrip(Convergent, SingleDashed),
+            }
+            ParkingForward | ParkingReverse => match previous {
+                Grass | Sidewalk => Nothing,
+                NormalForward | NormalReverse | DirtForward | DirtReverse | BusForward | BusReverse | ShoulderForward | ShoulderReverse => ParkingStrip,
+                ParkingForward | ParkingReverse => SeparationStrip(Convergent, SingleContinuous),
+            }
+            ShoulderForward | ShoulderReverse => match previous {
+                Grass | Sidewalk | DirtForward | DirtReverse | ShoulderForward | ShoulderReverse => Nothing,
+                NormalForward | NormalReverse | BusForward | BusReverse | ParkingForward | ParkingReverse => SeparationStrip(Convergent, SingleContinuous),
+            }
         }
     }
 }
@@ -155,8 +183,10 @@ pub enum LaneFlow {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum LaneCrossing {
-    Allowed,
-    NotAllowed,
+    SingleDashed,
+    SingleContinuous,
+    DoubleDashed,
+    DoubleContinuous,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
