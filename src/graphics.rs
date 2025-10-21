@@ -96,7 +96,7 @@ impl Graphics {
     }
 }
 
-fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32, colour: Color, dash_len: f32, spacing: f32, butt: bool, cramped: bool) -> GameResult {
+fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32, colour: Color, dash_len: f32, spacing: f32, butt: bool, greedy: bool) -> GameResult {
     let mut len = (to - from).length();
     if butt {
         len += width / 2.0;
@@ -115,7 +115,7 @@ fn make_dashed_line(builder: &mut MeshBuilder, from: Vec2, to: Vec2, width: f32,
         //We have enough space
         let rem_len = len - dash_len;
         let mut times = rem_len / (dash_len + spacing);
-        if cramped {
+        if greedy {
             times = times.ceil();
         } //
         else {
