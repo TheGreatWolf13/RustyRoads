@@ -6,6 +6,7 @@ use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Grass, NormalFo
 use LaneWidth::Full;
 use LaneWidth::Half;
 use LaneDirection::{Forward, Reverse};
+use crate::traffic::LaneSeparator::{BorderStrip, Curb, Nothing};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, EnumIter)]
 #[repr(u8)]
@@ -41,6 +42,35 @@ impl LaneType {
             Grass | Sidewalk => None,
             NormalForward | DirtForward | BusForward | ParkingForward | ShoulderForward => Some(Forward),
             NormalReverse | DirtReverse | BusReverse | ParkingReverse | ShoulderReverse => Some(Reverse),
+        }
+    }
+
+    pub fn pre_separator(self, previous: Self, first_lane: bool) -> LaneSeparator {
+        match self {
+            Grass => match previous {
+                Grass | Sidewalk | DirtForward | DirtReverse | ShoulderForward | ShoulderReverse => Nothing,
+                NormalForward | NormalReverse | BusForward | BusReverse | ParkingForward | ParkingReverse => Curb,
+            }
+            Sidewalk => match previous {
+                Grass | Sidewalk | DirtForward | DirtReverse => Nothing,
+                NormalForward | NormalReverse | BusForward | BusReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Curb,
+            }
+            NormalForward => match previous {
+                Grass | Sidewalk => BorderStrip(if_else!(first_lane => LaneBorder::Edge ; LaneBorder::Middle)),
+                NormalForward => {}
+                NormalReverse => {}
+                DirtForward | DirtReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Nothing,
+                BusForward => {}
+                BusReverse => {}
+            }
+            NormalReverse => {}
+            DirtForward | DirtReverse => Nothing,
+            BusForward => {}
+            BusReverse => {}
+            ParkingForward => {}
+            ParkingReverse => {}
+            ShoulderForward => {}
+            ShoulderReverse => {}
         }
     }
 }
@@ -107,3 +137,30 @@ seq!(N in 1..=40 {
         }
     }
 });
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LaneSeparator {
+    Nothing,
+    Curb,
+    BorderStrip(LaneBorder),
+    SeparationStrip(LaneFlow, LaneCrossing),
+    ParkingStrip,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LaneFlow {
+    Convergent,
+    Divergent,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LaneCrossing {
+    Allowed,
+    NotAllowed,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LaneBorder {
+    Edge,
+    Middle,
+}
