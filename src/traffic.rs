@@ -2,7 +2,7 @@ use rustc_hash::FxHashMap;
 use seq_macro::seq;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Empty, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
+use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
 use LaneWidth::Full;
 use LaneWidth::Half;
 use LaneDirection::{Forward, Reverse};
@@ -10,7 +10,6 @@ use LaneDirection::{Forward, Reverse};
 #[derive(Copy, Clone, Eq, PartialEq, Debug, EnumIter)]
 #[repr(u8)]
 pub enum LaneType {
-    Empty,
     Grass,
     Sidewalk,
     NormalForward,
@@ -28,7 +27,7 @@ pub enum LaneType {
 impl LaneType {
     pub fn width(self) -> LaneWidth {
         match self {
-            Empty | Grass | Sidewalk => Half,
+            Grass | Sidewalk => Half,
             NormalForward | NormalReverse | DirtForward | DirtReverse | BusForward | BusReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Full,
         }
     }
@@ -39,7 +38,7 @@ impl LaneType {
 
     pub fn direction(self) -> Option<LaneDirection> {
         match self {
-            Empty | Grass | Sidewalk => None,
+            Grass | Sidewalk => None,
             NormalForward | DirtForward | BusForward | ParkingForward | ShoulderForward => Some(Forward),
             NormalReverse | DirtReverse | BusReverse | ParkingReverse | ShoulderReverse => Some(Reverse),
         }
@@ -90,7 +89,7 @@ seq!(N in 1..=40 {
             let lanes = match size {
                 0 => panic!("Size cannot be zero!"),
                 #(
-                  N => LaneStorage::W~N([Empty; N]),
+                  N => LaneStorage::W~N([Grass; N]),
                 )*
                 _ => panic!("Exceeded max size!"),
             };
