@@ -1,6 +1,7 @@
 use crate::math::vec::Vec2CompWise;
 use crate::math::{if_else, vec::Vec2Axis, Sqr};
 use crate::node::a_star::AStarHeap;
+use crate::traffic::LaneDefinition;
 use crate::CITY_WIDTH;
 use ggez::glam::{IVec2, Vec2};
 use rustc_hash::FxHashMap;
@@ -9,7 +10,6 @@ use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::num::NonZeroU64;
-use crate::traffic::LaneDefinition;
 
 mod a_star;
 mod fibonacci_heap;
@@ -289,8 +289,7 @@ impl NodeManager {
                 if let Some(last) = last_node {
                     if x == 0 {
                         manager.make_edge(last, node, 2.0, 16);
-                    }
-                    else {
+                    } else {
                         manager.make_edge(last, node, 1.0, 12);
                     }
                 }
@@ -302,7 +301,7 @@ impl NodeManager {
             for x in -RADIUS..=RADIUS {
                 let node = ids[(x + RADIUS) as usize][(y + RADIUS) as usize];
                 if let Some(last) = last_node {
-                    manager.make_edge(last, node, 1.0);
+                    manager.make_edge(last, node, 1.0, 12);
                 }
                 last_node = Some(node);
             }
