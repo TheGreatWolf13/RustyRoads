@@ -85,7 +85,7 @@ seq!(N in 1..=40 {
             }
         }
 
-        pub fn size(&self) -> u8 {
+        pub fn get_size(&self) -> u8 {
             match self.lanes {
                 #(
                   LaneStorage::W~N(_) => N,

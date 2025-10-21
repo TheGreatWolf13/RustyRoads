@@ -65,7 +65,8 @@ impl Graphics {
     }
 
     pub fn draw_ege(&self, canvas: &mut Canvas, ctx: &mut Context, edge: &Edge, node_manager: &NodeManager, current_path: &Option<Vec<EdgeId>>, explored_paths: &Vec<EdgeId>) -> GameResult {
-        const LENGTH: f32 = 10.0;
+        const WIDTH_PER_UNIT: f32 = 1.25;
+        let width = edge.get_size() as f32 * WIDTH_PER_UNIT;
         let (a, b) = edge.get_nodes().map(|id| node_manager.get_node_pos(id).unwrap());
         let main_dir = (b - a).normalize();
         let perp = main_dir.perp();
@@ -85,10 +86,10 @@ impl Graphics {
             ctx,
             DrawMode::fill(),
             &[
-                a + 0.5 * LENGTH * perp,
-                a - 0.5 * LENGTH * perp,
-                b - 0.5 * LENGTH * perp,
-                b + 0.5 * LENGTH * perp,
+                a + 0.5 * width * perp,
+                a - 0.5 * width * perp,
+                b - 0.5 * width * perp,
+                b + 0.5 * width * perp,
             ],
             color,
         )?, DrawParam::new().color(Color::WHITE));

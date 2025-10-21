@@ -9,6 +9,7 @@ use std::hash::Hash;
 use std::mem;
 use std::mem::MaybeUninit;
 use std::num::NonZeroU64;
+use crate::traffic::LaneDefinition;
 
 mod a_star;
 mod fibonacci_heap;
@@ -286,7 +287,12 @@ impl NodeManager {
             let mut last_node = None;
             for node in ids {
                 if let Some(last) = last_node {
-                    manager.make_edge(last, node, if_else!(x == 0 => 2.0 ; 1.0));
+                    if x == 0 {
+                        manager.make_edge(last, node, 2.0, 16);
+                    }
+                    else {
+                        manager.make_edge(last, node, 1.0, 12);
+                    }
                 }
                 last_node = Some(node);
             }
@@ -339,12 +345,13 @@ impl NodeManager {
         id
     }
 
-    pub fn make_edge(&mut self, node_a: NodeId, node_b: NodeId, speed: f32) -> EdgeId {
+    pub fn make_edge(&mut self, node_a: NodeId, node_b: NodeId, speed: f32, size: u8) -> EdgeId {
         let id = self.edges.get_id();
         self.edges.map.insert(id, Edge {
             nodes: (node_a, node_b),
             id,
             speed,
+            lane_def: LaneDefinition::new(size),
         });
         let node_a = self.get_node_mut(node_a).unwrap();
         node_a.edges.push(id);
@@ -491,6 +498,7 @@ pub struct Edge {
     id: EdgeId,
     nodes: (NodeId, NodeId),
     speed: f32,
+    lane_def: LaneDefinition,
 }
 
 impl Edge {
@@ -526,5 +534,9 @@ impl Edge {
         }
         debug_assert_eq!(self.nodes.1, node, "This edge does not contain the given node!");
         self.nodes.0
+    }
+
+    pub fn get_size(&self) -> u8 {
+        self.lane_def.get_size()
     }
 }
