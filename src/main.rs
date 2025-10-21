@@ -69,7 +69,7 @@ impl Game {
     }
 
     fn draw_edge(&self, edge: &Edge, mut canvas: &mut Canvas, mut ctx: &mut Context) -> GameResult {
-        self.graphics.draw_ege(&mut canvas, &mut ctx, &edge, &self.node_manager, &self.current_path, &self.explored_paths)?;
+        self.graphics.draw_ege(&mut canvas, &mut ctx, &edge, &self.node_manager, self.current_path.as_ref(), &self.explored_paths)?;
         Ok(())
     }
 
@@ -91,7 +91,7 @@ impl Game {
         }
     }
 
-    fn draw_node_internal(&self, node: &Node, canvas: &mut Canvas,  radius: f32, colour: Color) {
+    fn draw_node_internal(&self, node: &Node, canvas: &mut Canvas, radius: f32, colour: Color) {
         canvas.draw(self.graphics.circle(), DrawParam::new().scale(Vec2::splat(radius)).dest(node.get_pos()).color(colour));
     }
 }

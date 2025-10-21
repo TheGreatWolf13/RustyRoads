@@ -1,9 +1,9 @@
+use crate::node::{Edge, EdgeId, NodeManager};
 use crate::CITY_WIDTH;
 use ggez::glam::Vec2;
 use ggez::graphics::{Canvas, Color, DrawMode, DrawParam, Mesh, MeshBuilder, MeshData, Vertex};
 use ggez::{Context, GameResult};
 use std::f32::consts::PI;
-use crate::node::{Edge, EdgeId, NodeManager};
 use tuple_map::TupleMap2;
 
 pub struct Graphics {
@@ -64,7 +64,7 @@ impl Graphics {
         &self.bounds
     }
 
-    pub fn draw_ege(&self, canvas: &mut Canvas, ctx: &mut Context, edge: &Edge, node_manager: &NodeManager, current_path: &Option<Vec<EdgeId>>, explored_paths: &Vec<EdgeId>) -> GameResult {
+    pub fn draw_ege(&self, canvas: &mut Canvas, ctx: &mut Context, edge: &Edge, node_manager: &NodeManager, current_path: Option<&Vec<EdgeId>>, explored_paths: &Vec<EdgeId>) -> GameResult {
         const WIDTH_PER_UNIT: f32 = 1.25;
         let width = edge.get_size() as f32 * WIDTH_PER_UNIT;
         let (a, b) = edge.get_nodes().map(|id| node_manager.get_node_pos(id).unwrap());
@@ -73,7 +73,7 @@ impl Graphics {
         let color = if let Some(selected_edge) = node_manager.selected_edge && selected_edge == edge.get_id() {
             Color::GREEN
         } //
-        else if let Some(path) = &current_path && path.contains(&edge.get_id()) {
+        else if let Some(path) = current_path && path.contains(&edge.get_id()) {
             Color::YELLOW
         } //
         else if explored_paths.contains(&edge.get_id()) {
