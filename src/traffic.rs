@@ -2,9 +2,10 @@ use rustc_hash::FxHashMap;
 use seq_macro::seq;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use LaneType::{BikeLane, BusForward, BusReverse, DirtForward, DirtReverse, Empty, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
+use LaneType::{BusForward, BusReverse, DirtForward, DirtReverse, Empty, Grass, NormalForward, NormalReverse, ParkingForward, ParkingReverse, ShoulderForward, ShoulderReverse, Sidewalk};
 use LaneWidth::Full;
 use LaneWidth::Half;
+use LaneDirection::{Forward, Reverse};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, EnumIter)]
 #[repr(u8)]
@@ -12,7 +13,6 @@ pub enum LaneType {
     Empty,
     Grass,
     Sidewalk,
-    BikeLane,
     NormalForward,
     NormalReverse,
     DirtForward,
@@ -28,7 +28,7 @@ pub enum LaneType {
 impl LaneType {
     pub fn width(self) -> LaneWidth {
         match self {
-            Empty | Grass | Sidewalk | BikeLane => Half,
+            Empty | Grass | Sidewalk => Half,
             NormalForward | NormalReverse | DirtForward | DirtReverse | BusForward | BusReverse | ParkingForward | ParkingReverse | ShoulderForward | ShoulderReverse => Full,
         }
     }
@@ -36,12 +36,26 @@ impl LaneType {
     fn name_internal(self) -> String {
         format!("{:?}", self)
     }
+
+    pub fn direction(self) -> Option<LaneDirection> {
+        match self {
+            Empty | Grass | Sidewalk => None,
+            NormalForward | DirtForward | BusForward | ParkingForward | ShoulderForward => Some(Forward),
+            NormalReverse | DirtReverse | BusReverse | ParkingReverse | ShoulderReverse => Some(Reverse),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum LaneWidth {
     Half,
     Full,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum LaneDirection {
+    Forward,
+    Reverse,
 }
 
 pub struct LaneTypeManager {
